@@ -98,10 +98,7 @@ async def verify_request_turnstile(request: Request) -> None:
 
 @router.get("/puzzle", response_model=PuzzleResponse)
 async def get_puzzle(request: Request):
-    """获取当前谜题（需要 Turnstile 验证）"""
-    # 验证 Turnstile Token
-    await verify_request_turnstile(request)
-
+    """获取当前谜题（WebSocket 连接时已验证 Turnstile）"""
     return PuzzleResponse(
         seed=state.current_seed,
         difficulty=state.difficulty,
@@ -113,10 +110,7 @@ async def get_puzzle(request: Request):
 
 @router.post("/verify", response_model=VerifyResponse)
 async def verify_solution(sub: Submission, request: Request):
-    """验证哈希解并分发邀请码（需要 Turnstile 验证）"""
-
-    # 0. 验证 Turnstile Token（防止绕过前端）
-    await verify_request_turnstile(request)
+    """验证哈希解并分发邀请码（WebSocket 连接时已验证 Turnstile）"""
 
     # 1. 获取真实 IP（Cloudflare Header）
     real_ip = request.headers.get("cf-connecting-ip")
