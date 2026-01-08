@@ -80,7 +80,7 @@ async def verify_turnstile_token(
     try:
         # 调用 Cloudflare Siteverify API
         async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.post(SITEVERIFY_URL, data=payload)
+            response = await client.post(SITEVERIFY_URL, json=payload)
             response.raise_for_status()
             result = response.json()
 
@@ -106,27 +106,3 @@ async def verify_turnstile_token(
         error_message = f"Turnstile verification error: {str(e)}"
         print(f"[Turnstile] Unexpected error: {e}")
         return False, error_message
-
-
-def extract_token_from_header(authorization: Optional[str]) -> Optional[str]:
-    """
-    从 Authorization Header 提取 Token
-
-    支持格式：
-    - Bearer <token>
-    - <token>
-
-    Args:
-        authorization: Authorization header 值
-
-    Returns:
-        提取的 token，如果格式错误返回 None
-    """
-    if not authorization:
-        return None
-
-    # 移除 "Bearer " 前缀（如果存在）
-    if authorization.startswith("Bearer "):
-        return authorization[7:].strip()
-
-    return authorization.strip()

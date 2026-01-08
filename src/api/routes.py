@@ -11,7 +11,6 @@ from src.core.crypto import generate_invite_code, verify_argon2_solution
 from src.core.executor import get_process_pool
 from src.core.state import state
 from src.core.turnstile import (
-    extract_token_from_header,
     get_turnstile_config,
     verify_turnstile_token,
 )
@@ -68,37 +67,14 @@ async def append_to_verify_log(verify_data: dict) -> None:
         print(f"[File I/O Error] Failed to write verify.json: {e}")
 
 
-async def verify_request_turnstile(request: Request) -> None:
-    """
-    验证请求中的 Turnstile Token（从 Authorization Header）
-
-    Raises:
-        HTTPException: Token 无效或缺失
-    """
-    # 获取 Authorization Header
-    auth_header = request.headers.get("Authorization")
-    token = extract_token_from_header(auth_header)
-
-    if not token:
-        raise HTTPException(
-            status_code=403, detail="Missing Turnstile token in Authorization header"
-        )
-
-    # 获取客户端 IP
-    real_ip = request.headers.get("cf-connecting-ip") or request.client.host
-
-    # 验证 Token
-    is_valid, error_message = await verify_turnstile_token(token, real_ip)
-
-    if not is_valid:
-        raise HTTPException(
-            status_code=403, detail=error_message or "Turnstile verification failed"
-        )
-
-
 @router.get("/puzzle", response_model=PuzzleResponse)
 async def get_puzzle(request: Request):
-    """获取当前谜题（WebSocket 连接时已验证 Turnstile）"""
+    """
+    获取当前谜题
+
+    注意：此端点不直接验证 Turnstile Token。
+    客户端应建立 WebSocket 连接（已验证 Turnstile）后调用此端点。
+    """
     return PuzzleResponse(
         seed=state.current_seed,
         difficulty=state.difficulty,
@@ -110,7 +86,12 @@ async def get_puzzle(request: Request):
 
 @router.post("/verify", response_model=VerifyResponse)
 async def verify_solution(sub: Submission, request: Request):
-    """验证哈希解并分发邀请码（WebSocket 连接时已验证 Turnstile）"""
+    """
+    验证哈希解并分发邀请码
+
+    注意：此端点不直接验证 Turnstile Token。
+    客户端应建立 WebSocket 连接（已验证 Turnstile）后调用此端点。
+    """
 
     # 1. 获取真实 IP（Cloudflare Header）
     real_ip = request.headers.get("cf-connecting-ip")

@@ -357,45 +357,49 @@ TURNSTILE_TEST_MODE=false
 
 #### Token Flow
 
+**Important**: Turnstile tokens can only be verified **once**. HashPass uses a single-verification architecture:
+
 1. **Frontend Initialization**:
    - Page loads → Turnstile Widget renders
    - User passes challenge → Token received
-   - UI enabled + WebSocket connected
+   - UI enabled
 
-2. **API Request Protection**:
-   - Client sends token in `Authorization: Bearer <token>` header
-   - Server validates token with Cloudflare Siteverify API
-   - Request rejected (403) if token invalid/missing
-
-3. **WebSocket Protection**:
+2. **WebSocket Connection (Single Token Verification)**:
    - Token passed as query parameter: `ws://host/api/ws?token=<token>`
+   - Server validates token with Cloudflare Siteverify API **once**
    - Connection rejected (1008 close code) if invalid
-   - Frontend prompts user to refresh page
+   - Once connected, WebSocket remains open for real-time communication
+
+3. **API Requests (No Token Re-verification)**:
+   - `/api/puzzle` and `/api/verify` endpoints do NOT verify Turnstile tokens
+   - Clients should establish WebSocket connection first (which validates identity)
+   - API endpoints rely on IP binding, fingerprinting, and atomic lock for security
 
 4. **Token Expiration**:
    - Tokens expire after 5 minutes
    - Widget automatically resets and requests new verification
+   - User must reconnect WebSocket with new token
    - UI disabled until new token obtained
 
 #### Security Mechanisms
 
 **What Turnstile adds**:
-- Bot detection (prevents automated mining scripts)
+- Bot detection at WebSocket connection (prevents automated mining scripts)
 - Rate limiting (Cloudflare's built-in protections)
-- Challenge-response verification
-- IP binding (validates token matches request origin)
+- Challenge-response verification (one-time token validation)
+- IP binding (validates token matches WebSocket connection origin)
 
 **Integration Points**:
 - `src/core/turnstile.py` - Token verification logic
-- `src/api/routes.py` - Endpoint protection middleware
+- `src/api/routes.py:248-274` - WebSocket connection protection
 - `static/app.js` - Frontend token management
 - `static/index.html` - Widget rendering
 
 **Error Handling**:
-- Missing token → 403 Forbidden
-- Expired token → Widget auto-resets
-- Invalid token → 403 Forbidden + logged
-- WebSocket token fail → 1008 close code
+- Missing token → WebSocket connection rejected (1008 close code)
+- Expired token → Widget auto-resets, user must reconnect
+- Invalid token → 1008 close code + logged
+- Token already used → Connection fails (tokens are single-use)
 
 ### Webhook Notifications
 
@@ -525,12 +529,12 @@ async def receive_webhook(
 
 ## API Endpoints
 
-- `GET /api/puzzle` - Returns current seed, difficulty, memory_cost (requires Turnstile token)
-- `POST /api/verify` - Submits solution, returns invite code or error (requires Turnstile token)
+- `GET /api/puzzle` - Returns current seed, difficulty, memory_cost (no token verification)
+- `POST /api/verify` - Submits solution, returns invite code or error (no token verification)
 - `GET /api/turnstile/config` - Returns Turnstile Site Key and test mode status
 - `GET /api/health` - Health check with current seed preview
 - `GET /api/dev/trace` - Development-only Cloudflare Trace mock
-- `WS /api/ws?token=<token>` - WebSocket for real-time puzzle reset notifications (requires Turnstile token in query param)
+- `WS /api/ws?token=<token>` - WebSocket for real-time communication (verifies Turnstile token once on connection)
 
 ## Data Persistence & Audit Logs
 
@@ -586,17 +590,18 @@ The system logs all successful verifications with **automatic log rotation**:
 ## Security Considerations
 
 **What this system prevents**:
-- **Automated bots** (Cloudflare Turnstile challenge)
+- **Automated bots** (Cloudflare Turnstile challenge on WebSocket connection)
 - **GPU farms** (memory-hard algorithm)
-- **Proxy/VPN cheating** (IP binding via TraceData + Turnstile)
-- **Multi-accounting** (hardware fingerprinting + Turnstile)
+- **Proxy/VPN cheating** (IP binding via TraceData)
+- **Multi-accounting** (hardware fingerprinting)
 - **Race conditions** (atomic lock)
-- **Script-based attacks** (Turnstile bot detection)
+- **Script-based attacks** (Turnstile bot detection at connection time)
 
 **What this system does NOT prevent**:
 - Determined attackers with matching IP ranges
 - Browser fingerprint spoofing at engine level
 - Users with high-memory systems having advantage (by design)
+- API endpoint abuse after successful WebSocket authentication (mitigated by IP binding and fingerprinting)
 
 ## Troubleshooting
 
@@ -616,13 +621,9 @@ The system logs all successful verifications with **automatic log rotation**:
 - Ensure no ad blockers are interfering
 - Check `/api/turnstile/config` returns valid Site Key
 
-**"403 Forbidden" on API requests**:
-- Frontend: Check that `turnstileToken` is set before making requests
-- Backend: Verify `TURNSTILE_TEST_MODE=true` in development
-- Production: Confirm real Turnstile keys are set in environment
-
 **WebSocket closes immediately (1008 code)**:
 - Token missing or invalid in WebSocket URL
+- Token may have been used already (tokens are single-use)
 - Refresh page to get new Turnstile token
 - Check server logs for validation errors
 
