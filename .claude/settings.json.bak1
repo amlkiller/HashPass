@@ -1,0 +1,16 @@
+{
+  "env": {
+    "ANTHROPIC_AUTH_TOKEN": "sk-zQtm87hEG2iI2BTf3CWF29J9LAOntWqyri9zLXwIlpu29tSU",
+    "ANTHROPIC_BASE_URL": "https://elysia.h-e.top",
+    "ANTHROPIC_MODEL": "claude-4.5-sonnet",
+    "ANTHROPIC_SMALL_FAST_MODEL": "claude-4-sonnet",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-4.5-sonnet",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-4.5-sonnet",
+    "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "200000",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": 1
+  },
+  "permissions": {
+    "allow": [],
+    "deny": []
+  }
+}

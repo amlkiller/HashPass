@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HashPass - Atomic Hash-Lock Protocol</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Cloudflare Turnstile Script -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+</head>
+<body>
+    <div class="container">
+        <!-- 左栏：控制面板 -->
+        <div class="left-panel">
+            <!-- 标题 -->
+            <header class="header">
+                <h1>HashPass</h1>
+                <p class="subtitle">Atomic Hash-Lock Protocol</p>
+            </header>
+
+            <!-- 主题切换器 -->
+            <section class="theme-switcher">
+                <button class="theme-btn" data-theme="light" title="浅色模式">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M8 1V3M8 13V15M15 8H13M3 8H1M12.5 3.5L11 5M5 11L3.5 12.5M12.5 12.5L11 11M5 5L3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <button class="theme-btn" data-theme="system" title="跟随系统">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <rect x="2" y="3" width="12" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M2 9H14" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                </button>
+                <button class="theme-btn active" data-theme="dark" title="深色模式">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M14 8.5C13.5 11.5 10.5 14 7 14C3.5 14 1 11.5 1 8C1 4.5 3.5 2 7 2C7.5 2 8 2.1 8.5 2.2C7 3.5 6 5.5 6 8C6 10.5 7.5 13 10 14C11.5 13.5 13 12 14 10.5V8.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </section>
+
+            <!-- 介绍 -->
+            <section class="intro">
+                <p>Ephemeral Puzzles. Memory-Hard Proofs. Winner Takes All.</p>
+            </section>
+
+            <!-- 状态信息 -->
+            <section class="status">
+                <!-- Turnstile 人机验证 -->
+                <div class="status-item turnstile-container" id="turnstileContainer">
+                    <span class="label">人机验证</span>
+                    <div id="turnstileWidget" class="turnstile-widget"></div>
+                </div>
+
+                <div class="status-item">
+                    <span class="label">状态</span>
+                    <span class="value" id="statusText">准备中...</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">WebSocket</span>
+                    <span class="value status-badge" id="wsStatus" data-status="disconnected">
+                        <span class="status-dot"></span>
+                        <span class="status-text">断开</span>
+                    </span>
+                </div>
+                <div class="status-item">
+                    <span class="label">设备指纹</span>
+                    <span class="value mono" id="fingerprint">计算中...</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">当前难度</span>
+                    <span class="value" id="difficulty">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">挖矿时长</span>
+                    <span class="value mono" id="miningTime">--:--:--</span>
+                </div>
+                <progress id="progress" style="display:none;"></progress>
+            </section>
+
+            <!-- 并列的开始和停止按钮 -->
+            <section class="controls">
+                <button id="startBtn" class="btn btn-primary" onclick="startMining()">开始挖矿</button>
+                <button id="stopBtn" class="btn btn-secondary" onclick="stopMining()" disabled>停止</button>
+            </section>
+
+            <!-- 邀请码框 -->
+            <section id="result" class="result" style="display:none;">
+                <h3 class="result-title">恭喜获胜!</h3>
+                <div class="invite-code-wrapper">
+                    <input type="text" id="inviteCode" class="invite-input" readonly>
+                    <button class="btn btn-copy" onclick="copyCode()">复制</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- 右栏：日志 -->
+        <div class="right-panel">
+            <div class="log-header">
+                <h4>日志</h4>
+            </div>
+            <!-- 双栏速度显示 -->
+            <div class="hash-rate-container">
+                <!-- 本地算力 -->
+                <div class="hash-rate-display local" id="hashRateDisplay">
+                    <div class="hash-rate-label">本地速度</div>
+                    <div class="hash-rate-value inactive" id="hashRateValue">--</div>
+                    <div class="hash-rate-unit">H/s</div>
+                </div>
+
+                <!-- 全网算力 -->
+                <div class="hash-rate-display network" id="networkHashRateDisplay">
+                    <div class="hash-rate-label">全网速度</div>
+                    <div class="hash-rate-value inactive" id="networkHashRateValue">--</div>
+                    <div class="hash-rate-unit">H/s</div>
+                    <div class="hash-rate-miners" id="networkMiners">0人在线</div>
+                </div>
+            </div>
+            <div id="logBox" class="log-box"></div>
+        </div>
+    </div>
+
+    <script type="module" src="/static/app.js"></script>
+</body>
+</html>

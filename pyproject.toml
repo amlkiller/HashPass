@@ -1,0 +1,14 @@
+[project]
+name = "hashpass"
+version = "0.1.0"
+description = "Atomic Hash-Lock Protocol Invite System"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "argon2-cffi>=23.1.0",
+    "pydantic>=2.5.0",
+    "python-multipart>=0.0.6",
+    "httpx>=0.25.0",
+]

@@ -1,0 +1,254 @@
+
+# HashPass: The Atomic Hash-Lock Protocol
+
+> "Ephemeral Puzzles. Memory-Hard Proofs."
+> —— **瞬时哈希锁，内存级硬核验证，赢家通吃。**
+
+**HashPass** 是一个基于 **Client Puzzles（客户端谜题）** 架构的硬核邀请码分发系统。
+
+它彻底摒弃了传统的数据库状态维护，转而使用 **Python 内存全局状态 + `asyncio.Lock**` 来维护一个全网唯一的、动态重置的原子哈希锁。系统深度结合 **ThumbmarkJS** 设备指纹与 **Argon2** 内存硬依赖算法，并将 **Cloudflare Trace** 网络特征强制混入算力计算过程，构建了一个无需外部缓存组件（No Redis）、抗 ASIC、抗 GPU、抗云服务器集群的绝对公平竞速环境。
+
+## 🌟 核心特性 (Features)
+
+* **🧠 内存硬依赖 (Memory-Hard)**: 采用 **Argon2id** 算法。挖矿不仅消耗 CPU，必须占用 **64MB+ RAM**。这使得低配云服务器（VPS）和僵尸网络无法批量并发，因为内存成本远高于 CPU 成本。
+* **📍 全链路环境绑定**: 算力计算的 Salt 强制包含 `TraceData`（IP/ISP信息）。这意味着算力无法外包——黑客无法用高性能服务器计算后，再通过廉价代理 IP 提交，因为 IP 不匹配会导致服务端哈希验证失败。
+* **⚡ 内存级原子锁 (In-Memory Atomic Lock)**: 移除 Redis，利用 Python 的 `asyncio.Lock` 实现毫秒级互斥。全网争夺同一个 Puzzle Seed。一旦有人解开，服务器内存中的 Seed 立即重置，其他人的计算瞬间作废。
+* **🆔 硬件级指纹**: 集成 **ThumbmarkJS**。算力绑定物理硬件（Canvas, Audio, Screen），有效遏制“一机多号”。
+* **🔐 零存储隐私**: 邀请码由服务器 HMAC 签名动态生成，仅通过私有 HTTP 响应发放，服务端不存储任何用户数据。
+
+## 🧩 协议架构 (The Protocol)
+
+### 1. 混合身份认证 (Hybrid Identity)
+
+为了确保“一人一机一IP”，我们构建了多维度的身份盐（Salt），并将反作弊前置：
+
+* **Network Identity**: Cloudflare Trace (IP, Country, Data Center).
+* **Device Identity**: Thumbmark Visitor ID (Based on Canvas, Audio, WebGL).
+
+**反作弊逻辑**：
+
+* **禁止算力代打**：计算哈希时混入了当前 IP 特征，计算端 IP 必须与提交端 IP 一致。
+* **指纹欺诈检测**：服务端验证 Trace 信息中的 IP 是否与 HTTP 请求的真实连接 IP 匹配。
+
+### 2. 动态谜题 (The Atomic Puzzle)
+
+服务器在内存中维护全局谜题状态：
+
+```python
+# Python Global State
+CURRENT_PUZZLE = {
+  "seed": "f8a9d2...",  # 随机生成的 32字节 Hex，每当有人获胜立即改变
+  "difficulty": 4,      # 目标哈希前 N 位需为 0
+  "memory_cost": 65536  # 要求客户端分配 64MB 内存
+}
+
+```
+
+### 3. 挖掘算法 (Algorithm: Argon2id)
+
+矿工（浏览器）必须加载 WebAssembly 模块执行以下计算。
+
+**核心公式**:
+
+
+* **TraceData**: Cloudflare 提供的原始连接信息（包含 IP）。
+* **绑定效应**: 必须同时满足 “正确的时间 (Seed)” + “正确的设备 (Thumbmark)” + “正确的网络环境 (Trace)”，算力才有效。
+
+---
+
+## 🛠️ 技术栈 (Tech Stack)
+
+### Frontend
+
+* **UI**: Preact + Pico.css
+* **Mining**: `hash-wasm` (High-performance Argon2 via WASM)
+* **Fingerprinting**: `ThumbmarkJS`
+
+### Backend
+
+* **Language**: Python 3.9+
+* **Framework**: FastAPI
+* **Concurrency**: `asyncio` (用于处理原子锁)
+* **Crypto**: `argon2-cffi` (Python 标准 Argon2 绑定)
+* **Storage**: **None** (纯内存变量，重启即重置)
+
+---
+
+## 🚀 快速开始 (Quick Start)
+
+### 1. 前端实现 (Miner Logic)
+
+*使用 JavaScript (ESM)*
+
+```javascript
+import { getFingerprint } from '@thumbmarkjs/thumbmarkjs';
+import { argon2id } from 'hash-wasm';
+
+async function startRace() {
+    // 1. 获取设备指纹 (硬件绑定)
+    const fp = await getFingerprint();
+    const visitorId = fp.hash;
+
+    // 2. 获取网络特征 (网络绑定) - 关键步骤
+    const traceData = await fetch('/cdn-cgi/trace').then(r => r.text());
+
+    // 3. 获取当前谜题
+    const puzzle = await fetch('/api/puzzle').then(r => r.json());
+
+    // 4. 开始内存硬依赖计算 (将 Trace 混入 Salt)
+    const result = await mineArgon2(puzzle.seed, visitorId, traceData, puzzle.difficulty);
+    
+    // 5. 提交结果
+    await submit({ ...result, traceData }, visitorId);
+}
+
+// 挖矿核心
+async function mineArgon2(seed, deviceId, traceData, difficulty) {
+    let nonce = 0;
+    
+    // ⚠️ 构建全链路绑定 Salt
+    // 攻击者若想使用代理提交，必须先获知代理 IP 的 TraceData，且必须在代理机器上运算
+    const saltString = seed + deviceId + traceData;
+    const salt = new TextEncoder().encode(saltString);
+    
+    while(true) {
+        nonce++;
+        const hash = await argon2id({
+            password: nonce.toString(),
+            salt: salt,
+            memoryCost: 65536, // 64MB RAM
+            timeCost: 3,
+            outputType: 'hex'
+        });
+        
+        if (hash.startsWith('0'.repeat(difficulty))) {
+            return { nonce, hash };
+        }
+    }
+}
+
+```
+
+### 2. 服务端实现 (Verification Logic)
+
+*使用 Python (FastAPI)*
+
+```python
+import asyncio
+import secrets
+from fastapi import FastAPI, Request, HTTPException
+from pydantic import BaseModel
+from argon2 import PasswordHasher, Type
+
+app = FastAPI()
+
+# --- 全局内存状态 & 原子锁 ---
+class SystemState:
+    def __init__(self):
+        self.lock = asyncio.Lock()
+        self.current_seed = secrets.token_hex(16)
+        # Argon2 配置: 64MB 内存, 3 轮迭代, 并行度 1
+        self.ph = PasswordHasher(
+            time_cost=3, 
+            memory_cost=65536, 
+            parallelism=1, 
+            hash_len=32, 
+            type=Type.ID
+        )
+
+state = SystemState()
+
+class Submission(BaseModel):
+    visitorId: str
+    nonce: int
+    submittedSeed: str
+    traceData: str
+
+@app.get("/api/puzzle")
+async def get_puzzle():
+    return {
+        "seed": state.current_seed,
+        "difficulty": 4,
+        "memory_cost": 65536
+    }
+
+@app.post("/api/verify")
+async def verify(sub: Submission, request: Request):
+    # 1. 获取真实 IP (Cloudflare Header)
+    real_ip = request.headers.get("cf-connecting-ip")
+    if not real_ip:
+        # 开发环境回退
+        real_ip = request.client.host
+
+    # 2. 完整性风控：校验提交的 TraceData 是否属于当前请求 IP
+    if f"ip={real_ip}" not in sub.traceData:
+        raise HTTPException(status_code=403, detail="Identity Mismatch (Trace/IP)")
+
+    # 3. 进入原子锁临界区 (Critical Section)
+    async with state.lock:
+        # 3.1 检查 Seed 是否过期
+        if state.current_seed != sub.submittedSeed:
+            raise HTTPException(status_code=409, detail="Too slow, puzzle reset")
+
+        # 3.2 重建 Salt (必须与前端完全一致)
+        # Salt = Seed + DeviceID + TraceData
+        salt_raw = (sub.submittedSeed + sub.visitorId + sub.traceData).encode('utf-8')
+        
+        # 3.3 验证 Argon2 哈希
+        # 注意: argon2-cffi 的 verify 需要完整的 hash 字符串，
+        # 这里为了演示简化了验证逻辑，实际应重新计算 hash 并对比前缀
+        try:
+            # 模拟重新计算哈希
+            # 实际生产中建议使用 low-level API 仅计算 hash 避免抛出异常
+            import argon2.low_level as alg
+            
+            raw_hash = alg.hash_secret_raw(
+                secret=str(sub.nonce).encode('utf-8'),
+                salt=salt_raw,
+                time_cost=3,
+                memory_cost=65536,
+                parallelism=1,
+                hash_len=32,
+                type=alg.Type.ID
+            )
+            hash_hex = raw_hash.hex()
+            
+            # 3.4 检查难度 (前 N 位为 0)
+            if not hash_hex.startswith("0" * 4): # difficulty = 4
+                raise HTTPException(status_code=400, detail="Invalid Hash Solution")
+            
+            # 4. 获胜处理：立即重置 Seed
+            state.current_seed = secrets.token_hex(16)
+            
+            # 返回邀请码
+            return {"invite_code": f"WINNER-{secrets.token_urlsafe(8)}"}
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+
+```
+
+---
+
+## ⚠️ 关键部署指南 (Deployment)
+
+由于我们移除了 Redis 并依赖 Python 的**内存全局变量**来维护原子锁，部署时必须遵守以下严格限制：
+
+1. **单进程模式 (Single Worker Only)**:
+你必须强制 Uvicorn/Gunicorn 仅使用 **1 个 Worker**。如果是多进程模式，不同进程间的内存不共享，会导致原子锁失效（用户 A 解开了进程 1 的锁，但进程 2 的用户还在跑旧的 Seed）。
+**启动命令**:
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1
+
+```
+
+
+2. **Cloudflare 强依赖**:
+本协议强依赖 Cloudflare 的 `/cdn-cgi/trace` 和 HTTP Headers (`cf-connecting-ip`) 来确保网络身份的真实性。请务必在 CF 后台开启 "Pseudo IPv4" 或确保能透传真实 IP。
+3. **内存配置**:
+Argon2 的 `memory_cost` 设为 64MB。这意味着如果有 100 个并发请求同时在服务端进行验证（虽然验证很快），理论瞬间峰值内存可能较高。但在 `asyncio.Lock` 的保护下，验证是串行的，因此服务端内存压力极小，压力全在客户端。
+
+## 📄 License
+
+MIT License
