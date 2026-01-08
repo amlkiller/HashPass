@@ -2,11 +2,13 @@
 Cloudflare Turnstile 验证模块
 提供 token 验证和测试模式支持
 """
-import os
-import httpx
-from typing import Tuple, Optional
-from fastapi import HTTPException
 
+import json
+import os
+from typing import Optional, Tuple
+
+import httpx
+from fastapi import HTTPException
 
 # Turnstile Siteverify API 端点
 SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
@@ -42,9 +44,7 @@ def get_turnstile_config() -> Tuple[str, str, bool]:
 
 
 async def verify_turnstile_token(
-    token: str,
-    remote_ip: Optional[str] = None,
-    secret_key: Optional[str] = None
+    token: str, remote_ip: Optional[str] = None, secret_key: Optional[str] = None
 ) -> Tuple[bool, Optional[str]]:
     """
     验证 Turnstile Token
@@ -78,7 +78,7 @@ async def verify_turnstile_token(
         payload["remoteip"] = remote_ip
 
     try:
-        # 调用 Cloudflare Siteverify API
+        # 调用 Cloudflare Siteverify API (必须使用 application/x-www-form-urlencoded 格式)
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.post(SITEVERIFY_URL, json=payload)
             response.raise_for_status()

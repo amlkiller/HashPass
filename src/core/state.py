@@ -3,7 +3,8 @@ import json
 import os
 import secrets
 import time
-from typing import Optional, Set, Dict
+from datetime import datetime
+from typing import Dict, Optional, Set
 
 from argon2 import PasswordHasher, Type
 from fastapi import WebSocket
@@ -195,9 +196,7 @@ class SystemState:
                                 self.difficulty -= 1
                                 reason = f"Timeout (mining time: {mining_time:.1f}s > {self.target_time_max}s) - auto reducing difficulty"
                             else:
-                                reason = (
-                                    f"Timeout (mining time: {mining_time:.1f}s) but already at min difficulty"
-                                )
+                                reason = f"Timeout (mining time: {mining_time:.1f}s) but already at min difficulty"
 
                             print(
                                 f"[Difficulty Adjustment] {reason}: {old_difficulty} -> {self.difficulty}"
@@ -232,7 +231,9 @@ class SystemState:
         )
 
         # 并行发送消息到所有连接
-        tasks = [connection.send_text(message) for connection in self.active_connections]
+        tasks = [
+            connection.send_text(message) for connection in self.active_connections
+        ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # 清理发送失败的连接
@@ -245,15 +246,19 @@ class SystemState:
 
     async def broadcast_network_hashrate(self, stats: Dict[str, float]):
         """广播全网算力统计给所有连接的客户端（并行发送）"""
-        message = json.dumps({
-            "type": "NETWORK_HASHRATE",
-            "total_hashrate": round(stats['total_hashrate'], 2),
-            "active_miners": stats['active_miners'],
-            "timestamp": time.time()
-        })
+        message = json.dumps(
+            {
+                "type": "NETWORK_HASHRATE",
+                "total_hashrate": round(stats["total_hashrate"], 2),
+                "active_miners": stats["active_miners"],
+                "timestamp": time.time(),
+            }
+        )
 
         # 并行发送消息到所有连接
-        tasks = [connection.send_text(message) for connection in self.active_connections]
+        tasks = [
+            connection.send_text(message) for connection in self.active_connections
+        ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # 清理发送失败的连接
@@ -264,12 +269,14 @@ class SystemState:
 
         self.active_connections -= disconnected
 
-    async def update_client_hashrate(self, ws: WebSocket, rate: float, client_ip: str) -> None:
+    async def update_client_hashrate(
+        self, ws: WebSocket, rate: float, client_ip: str
+    ) -> None:
         """更新客户端算力数据"""
         self.client_hashrates[ws] = {
             "rate": rate,
             "timestamp": time.time(),
-            "ip": client_ip
+            "ip": client_ip,
         }
 
     async def remove_client_hashrate(self, ws: WebSocket) -> None:
@@ -296,7 +303,7 @@ class SystemState:
         return {
             "total_hashrate": sum(active_rates),
             "active_miners": len(active_rates),
-            "stale_removed": len(stale_connections)
+            "stale_removed": len(stale_connections),
         }
 
     async def start_hashrate_aggregation(self) -> None:
@@ -307,11 +314,12 @@ class SystemState:
         async def aggregation_loop():
             while True:
                 try:
-                    await asyncio.sleep(2.0)  # 每2秒
+                    await asyncio.sleep(5.0)  # 每5秒
                     stats = await self.get_network_hashrate()
 
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     print(
-                        f"[全网算力] 总计: {stats['total_hashrate']:.2f} H/s | "
+                        f"[{timestamp}] [全网算力] 总计: {stats['total_hashrate']:.2f} H/s | "
                         f"活跃矿工: {stats['active_miners']} | "
                         f"已清理过时: {stats['stale_removed']}"
                     )
