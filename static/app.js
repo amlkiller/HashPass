@@ -408,12 +408,8 @@ async function startMining() {
     const ip = ipLine ? ipLine.split("=")[1] : "未知";
     log(`网络身份: ${ip}`);
 
-    // 2. 获取当前谜题（带 Authorization Header）
-    const puzzle = await fetch("/api/puzzle", {
-      headers: {
-        Authorization: `Bearer ${turnstileToken}`,
-      },
-    }).then((r) => {
+    // 2. 获取当前谜题（WebSocket 连接时已验证）
+    const puzzle = await fetch("/api/puzzle").then((r) => {
       if (!r.ok) {
         throw new Error(`获取谜题失败: ${r.status} ${r.statusText}`);
       }
@@ -507,7 +503,6 @@ async function submitSolution(result, submittedSeed, traceData) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${turnstileToken}`,
     },
     body: JSON.stringify({
       visitorId: visitorId,
