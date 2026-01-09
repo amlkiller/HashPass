@@ -4,7 +4,7 @@ import os
 import secrets
 import time
 from datetime import datetime
-from typing import Dict, Optional, Set
+from typing import Any, Dict, Optional, Set
 
 from argon2 import PasswordHasher, Type
 from fastapi import WebSocket
@@ -53,6 +53,16 @@ class SystemState:
 
         # WebSocket 连接管理
         self.active_connections: Set[WebSocket] = set()
+
+        # Session Token 管理（Token -> WebSocket + IP 映射）
+        self.session_tokens: Dict[str, Dict[str, Any]] = {}
+        # 结构: {
+        #   "token_string": {
+        #     "websocket": <WebSocket对象>,
+        #     "ip": "203.0.113.45",
+        #     "created_at": 1704712800.0
+        #   }
+        # }
 
         # 客户端算力跟踪
         self.client_hashrates: Dict[WebSocket, Dict[str, float]] = {}
@@ -343,6 +353,67 @@ class SystemState:
             except asyncio.CancelledError:
                 pass
             self.aggregation_task = None
+
+    def generate_session_token(self, websocket: WebSocket, ip: str) -> str:
+        """
+        为 WebSocket 连接生成 Session Token
+
+        Args:
+            websocket: WebSocket 连接对象
+            ip: 客户端 IP 地址
+
+        Returns:
+            生成的 256 位随机 Token
+        """
+        token = secrets.token_urlsafe(32)  # 生成 256 位随机 Token
+        self.session_tokens[token] = {
+            "websocket": websocket,
+            "ip": ip,
+            "created_at": time.time()
+        }
+        print(f"[Session Token] ✓ 生成 Token for IP {ip} (连接数: {len(self.session_tokens)})")
+        return token
+
+    def validate_session_token(self, token: str, request_ip: str) -> bool:
+        """
+        验证 Session Token 的有效性和 IP 一致性
+
+        Args:
+            token: 要验证的 Token
+            request_ip: 请求来源的 IP 地址
+
+        Returns:
+            True 如果 Token 有效且 IP 匹配，否则 False
+        """
+        if token not in self.session_tokens:
+            return False
+
+        token_data = self.session_tokens[token]
+
+        # 验证 IP 一致性
+        if token_data["ip"] != request_ip:
+            print(f"[Session Token] ✗ IP 不匹配: Token IP={token_data['ip']}, Request IP={request_ip}")
+            return False
+
+        return True
+
+    def revoke_session_token(self, websocket: WebSocket) -> None:
+        """
+        撤销与 WebSocket 关联的所有 Session Token
+
+        Args:
+            websocket: 要撤销 Token 的 WebSocket 连接
+        """
+        # 找到该 WebSocket 对应的所有 Token
+        tokens_to_remove = [
+            token for token, data in self.session_tokens.items()
+            if data["websocket"] == websocket
+        ]
+
+        # 删除找到的 Token
+        for token in tokens_to_remove:
+            del self.session_tokens[token]
+            print(f"[Session Token] ✓ 已撤销 Token (剩余: {len(self.session_tokens)})")
 
 
 # 全局单例

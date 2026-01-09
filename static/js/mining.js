@@ -55,6 +55,7 @@ async function submitSolution(result, submittedSeed, traceData) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "Authorization": `Bearer ${state.sessionToken}`  // ← 新增
     },
     body: JSON.stringify({
       visitorId: state.visitorId,
@@ -70,6 +71,11 @@ async function submitSolution(result, submittedSeed, traceData) {
     log(`🎉 获胜! 邀请码: ${data.invite_code}`, "success");
     document.getElementById("result").style.display = "block";
     document.getElementById("inviteCode").value = data.invite_code;
+  } else if (response.status === 401) {
+    // ← 新增：处理 401 错误
+    log("❌ Session Token 无效或已过期，请刷新页面", "error");
+    alert("会话已失效，请刷新页面重新验证");
+    stopMining();
   } else {
     const error = await response.json();
     log(`提交失败: ${error.detail}`, "error");
@@ -117,13 +123,26 @@ export async function startMining() {
     const ip = ipLine ? ipLine.split("=")[1] : "未知";
     log(`网络身份: ${ip}`);
 
-    // 2. 获取当前谜题（WebSocket 连接时已验证）
-    const puzzle = await fetch("/api/puzzle").then((r) => {
-      if (!r.ok) {
-        throw new Error(`获取谜题失败: ${r.status} ${r.statusText}`);
+    // 2. 获取当前谜题（需要 Session Token）
+    const puzzleResponse = await fetch("/api/puzzle", {
+      headers: {
+        "Authorization": `Bearer ${state.sessionToken}`
       }
-      return r.json();
     });
+
+    // 处理 401 错误
+    if (puzzleResponse.status === 401) {
+      log("❌ Session Token 无效或已过期，请刷新页面", "error");
+      alert("会话已失效，请刷新页面重新验证");
+      stopMining();
+      return;
+    }
+
+    if (!puzzleResponse.ok) {
+      throw new Error(`获取谜题失败: ${puzzleResponse.status} ${puzzleResponse.statusText}`);
+    }
+
+    const puzzle = await puzzleResponse.json();
 
     // 更新难度显示
     document.getElementById("difficulty").textContent = puzzle.difficulty;

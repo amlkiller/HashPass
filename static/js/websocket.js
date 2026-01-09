@@ -95,6 +95,14 @@ export function notifyMiningStop() {
  * @param {Object} data - 消息数据
  */
 function handleWebSocketMessage(data) {
+  // ===== 新增：处理 SESSION_TOKEN 消息 =====
+  if (data.type === "SESSION_TOKEN") {
+    state.sessionToken = data.token;
+    log("🔑 已接收 Session Token");
+    return;
+  }
+  // ===== 新增结束 =====
+
   if (data.type === "PONG") {
     // 更新在线人数
     state.onlineCount = data.online;

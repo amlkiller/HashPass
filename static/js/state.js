@@ -21,4 +21,7 @@ export const state = {
   turnstileToken: null,
   turnstilesiteKey: null,
   turnstileWidgetId: null,
+
+  // Session Token 状态
+  sessionToken: null,
 };

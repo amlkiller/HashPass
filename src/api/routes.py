@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
 
 from src.core.crypto import generate_invite_code, verify_argon2_solution
 from src.core.executor import get_process_pool
@@ -18,6 +18,57 @@ from src.core.webhook import send_webhook_notification
 from src.models.schemas import PuzzleResponse, Submission, VerifyResponse
 
 router = APIRouter(prefix="/api")
+
+
+# ===== Session Token 验证依赖 =====
+async def verify_session_token(
+    authorization: str = Header(None),
+    request: Request = None
+) -> str:
+    """
+    验证 Session Token 的 FastAPI 依赖函数
+
+    验证逻辑：
+    1. 检查 Authorization Header 是否存在
+    2. 验证格式是否为 "Bearer <token>"
+    3. 验证 Token 是否有效
+    4. 验证请求 IP 与 Token 绑定的 IP 是否一致
+
+    Returns:
+        验证通过的 Token 字符串
+
+    Raises:
+        HTTPException: 401 如果验证失败
+    """
+    # 1. 检查 Header 是否存在
+    if not authorization:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing Authorization header"
+        )
+
+    # 2. 验证格式
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid Authorization header format (expected 'Bearer <token>')"
+        )
+
+    # 3. 提取 Token
+    token = authorization.replace("Bearer ", "", 1)
+
+    # 4. 获取请求 IP
+    real_ip = request.headers.get("cf-connecting-ip") or request.client.host
+
+    # 5. 验证 Token 有效性和 IP 一致性
+    if not state.validate_session_token(token, real_ip):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired session token"
+        )
+
+    return token
+# ===== 依赖函数结束 =====
 
 
 async def append_to_verify_log(verify_data: dict) -> None:
@@ -68,12 +119,15 @@ async def append_to_verify_log(verify_data: dict) -> None:
 
 
 @router.get("/puzzle", response_model=PuzzleResponse)
-async def get_puzzle(request: Request):
+async def get_puzzle(
+    request: Request,
+    token: str = Depends(verify_session_token)  # ← 新增：Token 验证
+):
     """
     获取当前谜题
 
-    注意：此端点不直接验证 Turnstile Token。
-    客户端应建立 WebSocket 连接（已验证 Turnstile）后调用此端点。
+    注意：此端点需要有效的 Session Token。
+    客户端应建立 WebSocket 连接后获取 Token，再调用此端点。
     """
     return PuzzleResponse(
         seed=state.current_seed,
@@ -85,12 +139,16 @@ async def get_puzzle(request: Request):
 
 
 @router.post("/verify", response_model=VerifyResponse)
-async def verify_solution(sub: Submission, request: Request):
+async def verify_solution(
+    sub: Submission,
+    request: Request,
+    token: str = Depends(verify_session_token)  # ← 新增：Token 验证
+):
     """
     验证哈希解并分发邀请码
 
-    注意：此端点不直接验证 Turnstile Token。
-    客户端应建立 WebSocket 连接（已验证 Turnstile）后调用此端点。
+    注意：此端点需要有效的 Session Token。
+    客户端应建立 WebSocket 连接后获取 Token，再调用此端点。
     """
 
     # 1. 获取真实 IP（Cloudflare Header）
@@ -259,6 +317,15 @@ async def websocket_endpoint(websocket: WebSocket):
     state.active_connections.add(websocket)
     print(f"[WebSocket] New connection from IP {real_ip} (verified)")
 
+    # ===== 新增：生成并下发 Session Token =====
+    session_token = state.generate_session_token(websocket, real_ip)
+    await websocket.send_json({
+        "type": "SESSION_TOKEN",
+        "token": session_token
+    })
+    print(f"[WebSocket] Session Token sent to {real_ip}")
+    # ===== 新增结束 =====
+
     try:
         # 保持连接活跃，监听客户端消息（如心跳）
         while True:
@@ -305,11 +372,13 @@ async def websocket_endpoint(websocket: WebSocket):
         state.active_connections.discard(websocket)
         await state.remove_client_hashrate(websocket)
         state.stop_miner(websocket)  # 断开连接时停止挖矿计时
+        state.revoke_session_token(websocket)  # ← 新增：清理 Token
         print(f"[WebSocket] Client disconnected: {real_ip}")
     except Exception as e:
         state.active_connections.discard(websocket)
         await state.remove_client_hashrate(websocket)
         state.stop_miner(websocket)  # 异常断开时也停止挖矿计时
+        state.revoke_session_token(websocket)  # ← 新增：清理 Token
         print(f"[WebSocket] Error: {e}")
 
 
