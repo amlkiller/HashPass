@@ -156,12 +156,6 @@ export function connectWebSocket() {
     log("📡 WebSocket 已连接");
     updateWsStatus("connected", "已连接");
 
-    // 清除重连定时器
-    if (state.wsReconnectTimer) {
-      clearTimeout(state.wsReconnectTimer);
-      state.wsReconnectTimer = null;
-    }
-
     // 启动心跳
     startWsPing();
     // 立即发送一次 ping 获取在线人数
@@ -184,25 +178,18 @@ export function connectWebSocket() {
   };
 
   state.ws.onclose = (event) => {
-    // 检查是否是 Token 验证失败（1008 错误码）
-    if (event.code === 1008) {
-      log("❌ Turnstile Token 验证失败，请刷新页面重新验证", "error");
-      updateWsStatus("error", "验证失败");
-      stopWsPing();
-      // 禁用 UI，不自动重连
-      turnstileManager.disableUI();
-      resetNetworkHashRate();
-      return;
-    }
-
-    log("⚠️ WebSocket 已断开，3秒后重连...");
-    updateWsStatus("disconnected", "断开");
+    log("❌ WebSocket 连接已断开，请刷新页面重新连接", "error");
+    updateWsStatus("error", "连接断开");
     stopWsPing();
     resetNetworkHashRate();
 
-    // 3秒后重连
-    state.wsReconnectTimer = setTimeout(() => {
-      connectWebSocket();
-    }, 3000);
+    // 禁用 UI，要求用户刷新页面
+    turnstileManager.disableUI();
+
+    // 显示明确的刷新提示
+    const statusText = document.getElementById("statusText");
+    if (statusText) {
+      statusText.textContent = "连接已断开，请刷新页面";
+    }
   };
 }

@@ -13,7 +13,6 @@ export const state = {
 
   // WebSocket 状态
   ws: null,
-  wsReconnectTimer: null,
   wsPingTimer: null,
   onlineCount: 0,
 
