@@ -68,6 +68,14 @@ const turnstileManager = {
     turnstileToken = token;
     log("✅ Turnstile 验证成功", "success");
     this.enableUI();
+
+    // 验证成功后隐藏 Turnstile 组件
+    setTimeout(() => {
+      const turnstileContainer = document.getElementById("turnstileContainer");
+      if (turnstileContainer) {
+        turnstileContainer.classList.add("hidden");
+      }
+    }, 1000); // 延迟1秒后隐藏，让用户看到成功状态
   },
 
   onError() {
@@ -79,6 +87,12 @@ const turnstileManager = {
     log("Turnstile Token 已过期，正在重新验证...", "warning");
     turnstileToken = null;
     this.disableUI();
+
+    // 显示 Turnstile 容器以便重新验证
+    const turnstileContainer = document.getElementById("turnstileContainer");
+    if (turnstileContainer) {
+      turnstileContainer.classList.remove("hidden");
+    }
 
     // 重置 Widget
     if (turnstileWidgetId !== null) {
