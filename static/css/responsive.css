@@ -1,0 +1,467 @@
+/* HashPass - Responsive Design */
+
+/* ==================== Large Desktop (> 1600px) ==================== */
+@media (min-width: 1601px) {
+    .container {
+        max-width: 1800px;
+        grid-template-columns: 460px 1fr;
+        gap: 2.5rem;
+    }
+
+    body {
+        padding: 2.5rem;
+    }
+
+    .left-panel,
+    .right-panel {
+        padding: 2.5rem;
+    }
+
+    .header h1 {
+        font-size: 2.5rem;
+    }
+
+    .hash-rate-value {
+        font-size: 3rem;
+    }
+}
+
+/* ==================== Medium Desktop (1200px - 1400px) ==================== */
+@media (max-width: 1400px) {
+    .container {
+        max-width: 1200px;
+        grid-template-columns: minmax(300px, 380px) 1fr;
+        gap: 1.5rem;
+    }
+}
+
+/* ==================== Small Desktop / Large Tablet (1024px - 1200px) ==================== */
+@media (max-width: 1200px) and (min-width: 1025px) {
+    .container {
+        grid-template-columns: minmax(280px, 360px) 1fr;
+        gap: 1.5rem;
+    }
+
+    .left-panel,
+    .right-panel {
+        padding: 1.75rem;
+    }
+
+    .header h1 {
+        font-size: 2rem;
+    }
+
+    .hash-rate-value {
+        font-size: 2.25rem;
+    }
+}
+
+/* ==================== Tablet Landscape (768px - 1024px) ==================== */
+@media (max-width: 1024px) and (min-width: 769px) {
+    body {
+        padding: 1.5rem;
+    }
+
+    .container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: auto;
+        min-height: auto;
+        gap: 1.5rem;
+    }
+
+    .left-panel {
+        height: auto;
+        padding: 1.75rem;
+    }
+
+    .right-panel {
+        min-height: 750px;
+        max-height: 60vh;
+    }
+
+    .header h1 {
+        font-size: 2rem;
+    }
+
+    .hash-rate-container {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .hash-rate-value {
+        font-size: 2.25rem;
+    }
+
+    .controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+}
+
+/* ==================== Tablet Portrait (640px - 768px) ==================== */
+@media (max-width: 768px) and (min-width: 641px) {
+    body {
+        padding: 1.25rem;
+    }
+
+    .container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: auto;
+        min-height: auto;
+        gap: 1.25rem;
+    }
+
+    .left-panel,
+    .right-panel {
+        padding: 1.5rem;
+    }
+
+    .left-panel {
+        height: auto;
+    }
+
+    .right-panel {
+        min-height: 1000px;
+        max-height: 65vh;
+    }
+
+    .header h1 {
+        font-size: 1.875rem;
+    }
+
+    .hash-rate-container {
+        grid-template-columns: 1fr;
+    }
+
+    .hash-rate-display.local {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .hash-rate-value {
+        font-size: 2rem;
+    }
+
+    .controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+
+    .turnstile-widget {
+        transform: scale(0.9);
+        transform-origin: center;
+    }
+}
+
+/* ==================== Large Phone (480px - 640px) ==================== */
+@media (max-width: 640px) and (min-width: 481px) {
+    body {
+        padding: 1rem;
+    }
+
+    .container {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        height: auto;
+        min-height: auto;
+    }
+
+    .left-panel,
+    .right-panel {
+        padding: 1.25rem;
+    }
+
+    .right-panel {
+        min-height: 1050px;
+        max-height: 65vh;
+    }
+
+    .header h1 {
+        font-size: 1.75rem;
+    }
+
+    .subtitle {
+        font-size: 0.8125rem;
+    }
+
+    .controls {
+        flex-direction: column;
+        gap: 0.625rem;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 1rem 1.5rem;
+        font-size: 0.9375rem;
+    }
+
+    .hash-rate-container {
+        grid-template-columns: 1fr;
+    }
+
+    .hash-rate-display.local {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .hash-rate-value {
+        font-size: 1.875rem;
+    }
+
+    .hash-rate-label {
+        font-size: 0.6875rem;
+    }
+
+    .hash-rate-unit {
+        font-size: 0.8125rem;
+    }
+
+    .invite-code-wrapper {
+        flex-direction: column;
+        gap: 0.625rem;
+    }
+
+    .btn-copy {
+        width: 100%;
+    }
+
+    .turnstile-widget {
+        transform: scale(0.85);
+        transform-origin: center;
+    }
+
+    .status-item {
+        padding: 0.75rem;
+    }
+
+    .label,
+    .value {
+        font-size: 0.8125rem;
+    }
+
+    .mono {
+        font-size: 0.6875rem;
+        max-width: 160px;
+    }
+
+    .log-box {
+        font-size: 0.875rem;
+    }
+
+    .log-time {
+        font-size: 0.75rem;
+    }
+
+    .log-message {
+        font-size: 0.875rem;
+    }
+
+    .log-highlight {
+        font-size: 0.75rem;
+    }
+}
+
+/* ==================== Small Phone (< 480px) ==================== */
+@media (max-width: 480px) {
+    body {
+        padding: 0.75rem;
+    }
+
+    .container {
+        grid-template-columns: 1fr;
+        gap: 0.875rem;
+        height: auto;
+        min-height: auto;
+    }
+
+    .left-panel,
+    .right-panel {
+        padding: 1rem;
+        border-radius: 10px;
+    }
+
+    .right-panel {
+        min-height: 1050px;
+        max-height: 70vh;
+    }
+
+    .header {
+        margin-bottom: 0.5rem;
+    }
+
+    .header h1 {
+        font-size: 1.5rem;
+        margin-bottom: 0.375rem;
+    }
+
+    .subtitle {
+        font-size: 0.75rem;
+    }
+
+    .theme-switcher {
+        padding: 0.125rem;
+        gap: 0.375rem;
+    }
+
+    .theme-btn {
+        width: 32px;
+        height: 32px;
+    }
+
+    .theme-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .intro {
+        padding: 0.875rem;
+    }
+
+    .intro p {
+        font-size: 0.8125rem;
+    }
+
+    .status {
+        gap: 0.625rem;
+    }
+
+    .status-item {
+        padding: 0.625rem 0.75rem;
+    }
+
+    .label,
+    .value {
+        font-size: 0.75rem;
+    }
+
+    .mono {
+        font-size: 0.625rem;
+        max-width: 140px;
+        padding: 0.3125rem 0.5rem;
+    }
+
+    .controls {
+        flex-direction: column;
+        gap: 0.625rem;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 0.875rem 1.25rem;
+        font-size: 0.875rem;
+    }
+
+    .hash-rate-container {
+        grid-template-columns: 1fr;
+    }
+
+    .hash-rate-display {
+        padding: 1rem 0.75rem;
+    }
+
+    .hash-rate-display.local {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .hash-rate-value {
+        font-size: 1.75rem;
+        min-width: 80px;
+    }
+
+    .hash-rate-label {
+        font-size: 0.625rem;
+    }
+
+    .hash-rate-unit {
+        font-size: 0.75rem;
+    }
+
+    .hash-rate-miners {
+        font-size: 0.625rem;
+    }
+
+    .log-header {
+        padding: 1rem 1.25rem;
+    }
+
+    .log-header h4 {
+        font-size: 1rem;
+    }
+
+    .log-box {
+        padding: 0.75rem;
+        font-size: 0.8125rem;
+    }
+
+    .log-entry {
+        gap: 0.5rem;
+        padding: 0.625rem 0.75rem;
+        margin-bottom: 0.375rem;
+    }
+
+    .log-icon {
+        width: 16px;
+        height: 16px;
+        font-size: 0.8125rem;
+    }
+
+    .log-time {
+        font-size: 0.7rem;
+    }
+
+    .log-message {
+        font-size: 0.8125rem;
+    }
+
+    .log-highlight {
+        font-size: 0.75rem;
+        padding: 0.125rem 0.3125rem;
+    }
+
+    .result {
+        padding: 1rem;
+    }
+
+    .result-title {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .invite-code-wrapper {
+        flex-direction: column;
+        gap: 0.625rem;
+    }
+
+    .invite-input {
+        padding: 0.75rem;
+        font-size: 0.8125rem;
+    }
+
+    .btn-copy {
+        width: 100%;
+        padding: 0.75rem 1.25rem;
+        font-size: 0.8125rem;
+    }
+
+    .turnstile-widget {
+        transform: scale(0.75);
+        transform-origin: center;
+    }
+}
+
+/* ==================== Extra Small Phone (< 380px) ==================== */
+@media (max-width: 380px) {
+    .turnstile-container {
+        padding: 0.75rem;
+    }
+
+    .turnstile-widget {
+        transform: scale(0.7);
+        transform-origin: center;
+        min-height: 55px;
+    }
+}

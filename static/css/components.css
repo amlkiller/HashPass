@@ -1,0 +1,408 @@
+/* HashPass - Component Styles */
+
+/* ==================== Theme Switcher ==================== */
+.theme-switcher {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.25rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    width: fit-content;
+}
+
+.theme-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    min-width: 36px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.theme-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.theme-btn.active {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.theme-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ==================== Status Item ==================== */
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.875rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    min-height: 48px;
+}
+
+.status-item:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    flex-shrink: 0;
+    margin-right: 1rem;
+}
+
+.value {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ==================== WebSocket Status Badge ==================== */
+.status-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.status-badge[data-status="connected"] .status-dot {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+    animation: pulse-dot 2s infinite;
+}
+
+.status-badge[data-status="connecting"] .status-dot {
+    background: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+    animation: pulse-dot 1s infinite;
+}
+
+.status-badge[data-status="disconnected"] .status-dot {
+    background: #6b7280;
+}
+
+.status-badge[data-status="error"] .status-dot {
+    background: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+.status-text {
+    font-size: 0.8125rem;
+}
+
+.status-badge[data-status="connected"] .status-text {
+    color: #10b981;
+}
+
+.status-badge[data-status="connecting"] .status-text {
+    color: #f59e0b;
+}
+
+.status-badge[data-status="disconnected"] .status-text {
+    color: var(--text-tertiary);
+}
+
+.status-badge[data-status="error"] .status-text {
+    color: #ef4444;
+}
+
+/* ==================== Turnstile Component ==================== */
+.turnstile-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    align-items: stretch;
+    transition:
+        opacity 0.3s ease,
+        max-height 0.3s ease,
+        padding 0.3s ease,
+        margin 0.3s ease;
+    overflow: hidden;
+}
+
+.turnstile-container.hidden {
+    opacity: 0;
+    max-height: 0;
+    padding: 0;
+    margin: 0;
+    gap: 0;
+    border: none;
+}
+
+.turnstile-widget {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 65px;
+    width: 100%;
+    overflow: visible;
+}
+
+.turnstile-widget > div {
+    max-width: 100%;
+    transform-origin: center;
+}
+
+/* Turnstile Status Styles */
+#turnstileStatus[data-status="pending"] .status-dot {
+    background: #6b7280;
+}
+
+#turnstileStatus[data-status="pending"] .status-text {
+    color: var(--text-tertiary);
+}
+
+#turnstileStatus[data-status="loading"] .status-dot {
+    background: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+    animation: pulse-dot 1s infinite;
+}
+
+#turnstileStatus[data-status="loading"] .status-text {
+    color: #f59e0b;
+}
+
+#turnstileStatus[data-status="success"] .status-dot {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+    animation: pulse-dot 2s infinite;
+}
+
+#turnstileStatus[data-status="success"] .status-text {
+    color: #10b981;
+}
+
+#turnstileStatus[data-status="error"] .status-dot {
+    background: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+#turnstileStatus[data-status="error"] .status-text {
+    color: #ef4444;
+}
+
+/* ==================== Progress Bar ==================== */
+progress {
+    width: 100%;
+    height: 6px;
+    border: none;
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+progress::-webkit-progress-bar {
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+}
+
+progress::-webkit-progress-value {
+    background: linear-gradient(90deg, var(--success) 0%, var(--accent) 100%);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+progress::-moz-progress-bar {
+    background: linear-gradient(90deg, var(--success) 0%, var(--accent) 100%);
+    border-radius: 3px;
+}
+
+/* ==================== Buttons ==================== */
+.btn {
+    flex: 1;
+    padding: 0.875rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    position: relative;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    min-height: 44px;
+}
+
+.btn::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    transform: translate(-50%, -50%);
+    transition:
+        width 0.6s,
+        height 0.6s;
+}
+
+.btn:active::before {
+    width: 300px;
+    height: 300px;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: var(--bg-primary);
+    border-color: var(--accent);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.btn.loading {
+    position: relative;
+    color: transparent;
+    pointer-events: none;
+}
+
+.btn.loading::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: button-spin 0.6s linear infinite;
+}
+
+/* ==================== Invite Code Result ==================== */
+.result {
+    padding: 1.5rem;
+    background: var(--success-bg);
+    border: 2px solid var(--success);
+    border-radius: 12px;
+    margin-top: auto;
+    animation: slideIn 0.4s ease-out;
+}
+
+.result-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--success);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.result-title::before {
+    content: "🎉";
+    font-size: 1.5rem;
+}
+
+.invite-code-wrapper {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.invite-input {
+    flex: 1;
+    padding: 0.875rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-family:
+        "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas,
+        "Courier New", monospace;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.invite-input:focus {
+    outline: none;
+    border-color: var(--success);
+    box-shadow: 0 0 0 3px var(--success-bg);
+}
+
+.btn-copy {
+    padding: 0.875rem 1.5rem;
+    background: var(--success);
+    color: #ffffff;
+    border: 1px solid var(--success);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-copy:hover {
+    background: #0051cc;
+    border-color: #0051cc;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-copy:active {
+    transform: translateY(0);
+}

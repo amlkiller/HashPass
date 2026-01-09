@@ -1,0 +1,114 @@
+/* HashPass - Accessibility & User Preferences */
+
+/* ==================== Focus Styles ==================== */
+
+/* Visible focus indicators for keyboard navigation */
+button:focus-visible,
+input:focus-visible {
+    outline: 2px solid var(--success);
+    outline-offset: 2px;
+}
+
+/* ==================== Reduced Motion ==================== */
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ==================== High Contrast Mode ==================== */
+
+/* Enhanced contrast for better readability */
+@media (prefers-contrast: high) {
+    :root,
+    [data-theme="dark"] {
+        --border-color: #555555;
+        --text-secondary: #aaaaaa;
+    }
+
+    [data-theme="light"] {
+        --border-color: #cccccc;
+        --text-secondary: #555555;
+    }
+
+    .btn,
+    .status-item,
+    .log-entry {
+        border-width: 2px;
+    }
+}
+
+/* ==================== Dark Theme System Preference ==================== */
+
+/* Optimize contrast for forced dark mode */
+@media (prefers-color-scheme: dark) {
+    [data-theme="system"] {
+        --text-secondary: #999999;
+    }
+}
+
+/* ==================== Screen Reader Only Content ==================== */
+
+/* Utility class for screen reader only content */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* ==================== Touch Target Optimization ==================== */
+
+/* Ensure touch targets are large enough for accessibility */
+@media (pointer: coarse) {
+    .btn,
+    .theme-btn,
+    .status-item {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
+/* ==================== Print Styles ==================== */
+
+/* Optimize for printing */
+@media print {
+    body {
+        background: white;
+        color: black;
+    }
+
+    .theme-switcher,
+    .controls,
+    .turnstile-container {
+        display: none;
+    }
+
+    .container {
+        display: block;
+        height: auto;
+    }
+
+    .left-panel,
+    .right-panel {
+        box-shadow: none;
+        border: 1px solid #000;
+        page-break-inside: avoid;
+    }
+
+    .log-entry {
+        page-break-inside: avoid;
+    }
+}

@@ -1,0 +1,352 @@
+/* HashPass - Log Panel Styles */
+
+/* ==================== Log Header ==================== */
+.log-header {
+    padding: 1.25rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(
+        135deg,
+        var(--bg-tertiary) 0%,
+        var(--bg-secondary) 100%
+    );
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.log-header::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--success) 0%, transparent 100%);
+    border-radius: 0 2px 2px 0;
+}
+
+.log-header h4 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.log-header h4::before {
+    content: "📋";
+    font-size: 1.25rem;
+}
+
+/* ==================== Hash Rate Container ==================== */
+.hash-rate-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* ==================== Hash Rate Display ==================== */
+.hash-rate-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1.25rem 1rem 1rem;
+    background: linear-gradient(
+        135deg,
+        var(--bg-tertiary) 0%,
+        var(--bg-hover) 100%
+    );
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.hash-rate-display::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        var(--success),
+        transparent
+    );
+    transition: left 0.6s ease;
+}
+
+.hash-rate-display.active::before {
+    left: 100%;
+    animation: shimmer 3s infinite;
+}
+
+.hash-rate-display.active {
+    background: linear-gradient(
+        135deg,
+        rgba(0, 112, 243, 0.18) 0%,
+        rgba(0, 112, 243, 0.08) 50%,
+        rgba(0, 112, 243, 0.12) 100%
+    );
+    border-bottom-color: rgba(0, 112, 243, 0.4);
+    box-shadow:
+        inset 0 1px 0 0 rgba(0, 112, 243, 0.15),
+        0 4px 12px rgba(0, 112, 243, 0.1);
+}
+
+/* Local Hash Rate */
+.hash-rate-display.local {
+    border-right: 1px solid var(--border-color);
+}
+
+.hash-rate-display.local.active {
+    background: linear-gradient(
+        135deg,
+        rgba(16, 185, 129, 0.15) 0%,
+        rgba(16, 185, 129, 0.05) 100%
+    );
+    border-right-color: rgba(16, 185, 129, 0.3);
+}
+
+.hash-rate-display.local .hash-rate-value {
+    color: #10b981;
+    text-shadow:
+        0 0 30px rgba(16, 185, 129, 0.5),
+        0 0 60px rgba(16, 185, 129, 0.2);
+}
+
+/* Network Hash Rate */
+.hash-rate-display.network.active {
+    background: linear-gradient(
+        135deg,
+        rgba(0, 112, 243, 0.18) 0%,
+        rgba(0, 112, 243, 0.08) 100%
+    );
+    box-shadow: inset 0 1px 0 0 rgba(0, 112, 243, 0.15);
+}
+
+.hash-rate-display.network .hash-rate-value {
+    color: var(--success);
+}
+
+/* Hash Rate Elements */
+.hash-rate-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.8;
+}
+
+.hash-rate-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--success);
+    font-family:
+        "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas,
+        "Courier New", monospace;
+    letter-spacing: -0.03em;
+    min-width: 100px;
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    text-shadow:
+        0 0 30px rgba(0, 112, 243, 0.5),
+        0 0 60px rgba(0, 112, 243, 0.2);
+    line-height: 1;
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.hash-rate-value.inactive {
+    color: var(--text-tertiary);
+    text-shadow: none;
+    animation: none;
+    font-size: 2rem;
+}
+
+.hash-rate-unit {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.9;
+}
+
+.hash-rate-miners {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    margin-top: -0.25rem;
+}
+
+/* ==================== Log Box ==================== */
+.log-box {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: all 0.3s ease;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Scrollbar Styles */
+.log-box::-webkit-scrollbar {
+    width: 8px;
+}
+
+.log-box::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 4px;
+}
+
+.log-box::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+    border: 2px solid var(--bg-secondary);
+    transition: background 0.2s ease;
+}
+
+.log-box::-webkit-scrollbar-thumb:hover {
+    background: var(--text-tertiary);
+}
+
+/* Firefox Scrollbar */
+.log-box {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) var(--bg-secondary);
+}
+
+/* Empty State */
+.log-box:empty::before {
+    content: "暂无日志消息";
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+}
+
+/* ==================== Log Entry ==================== */
+.log-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+    border-left: 3px solid transparent;
+    background: var(--bg-tertiary);
+    opacity: 0;
+    animation: logFadeIn 0.3s ease-out forwards;
+    transition: all 0.2s ease;
+}
+
+.log-entry:hover {
+    background: var(--bg-hover);
+    transform: translateX(2px);
+}
+
+/* Log Icon */
+.log-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-top: 0.125rem;
+}
+
+/* Log Content */
+.log-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.log-time {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+
+.log-message {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    word-break: break-word;
+}
+
+/* Log Highlight */
+.log-highlight {
+    color: var(--text-primary);
+    font-weight: 600;
+    background: var(--bg-primary);
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    font-family:
+        "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas,
+        "Courier New", monospace;
+    font-size: 0.75rem;
+}
+
+/* ==================== Log Types ==================== */
+.log-entry.log-info {
+    border-left-color: #3b82f6;
+}
+
+.log-entry.log-info .log-icon {
+    color: #3b82f6;
+}
+
+.log-entry.log-success {
+    border-left-color: #10b981;
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.log-entry.log-success .log-icon {
+    color: #10b981;
+}
+
+.log-entry.log-success .log-message {
+    color: #10b981;
+    font-weight: 500;
+}
+
+.log-entry.log-error {
+    border-left-color: #ef4444;
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.log-entry.log-error .log-icon {
+    color: #ef4444;
+}
+
+.log-entry.log-error .log-message {
+    color: #ef4444;
+    font-weight: 500;
+}
+
+.log-entry.log-warning {
+    border-left-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.log-entry.log-warning .log-icon {
+    color: #f59e0b;
+}
+
+.log-entry.log-warning .log-message {
+    color: #f59e0b;
+}

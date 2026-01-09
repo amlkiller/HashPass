@@ -1,0 +1,127 @@
+/* HashPass - Animations & Keyframes */
+
+/* ==================== Keyframe Animations ==================== */
+
+/* Pulse Animation (Generic) */
+@keyframes pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Pulse Dot Animation (Status Indicator) */
+@keyframes pulse-dot {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
+}
+
+/* Pulse Glow Animation (Hash Rate) */
+@keyframes pulse-glow {
+    0%,
+    100% {
+        text-shadow:
+            0 0 30px rgba(0, 112, 243, 0.5),
+            0 0 60px rgba(0, 112, 243, 0.2);
+    }
+    50% {
+        text-shadow:
+            0 0 40px rgba(0, 112, 243, 0.7),
+            0 0 80px rgba(0, 112, 243, 0.3);
+    }
+}
+
+/* Shimmer Animation (Hash Rate Active) */
+@keyframes shimmer {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+/* Slide In Animation (Result Card) */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Log Fade In Animation */
+@keyframes logFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Button Spin Animation (Loading State) */
+@keyframes button-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ==================== Transition Classes ==================== */
+
+/* Theme Switcher Transitions */
+.theme-btn svg,
+.btn,
+.status-item,
+.intro,
+.left-panel,
+.right-panel,
+.log-header {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==================== Performance Optimizations ==================== */
+
+/* GPU Acceleration - Enable will-change for elements that frequently animate */
+.btn,
+.status-item,
+.log-entry,
+.theme-btn {
+    will-change: transform;
+}
+
+/* Disable will-change when not interacting to save resources */
+.btn:not(:active),
+.status-item:not(:hover),
+.log-entry:not(:hover),
+.theme-btn:not(:hover) {
+    will-change: auto;
+}
+
+/* ==================== Touch Interactions ==================== */
+
+/* Remove tap highlight on all elements */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent text selection on buttons */
+button {
+    -webkit-user-select: none;
+    user-select: none;
+}
