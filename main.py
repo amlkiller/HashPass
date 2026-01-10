@@ -30,6 +30,8 @@ async def lifespan(app: FastAPI):
     await state.start_timeout_checker()
     print("[HashPass] Starting hashrate aggregation...")
     await state.start_hashrate_aggregation()
+    print("[HashPass] Starting session token cleanup...")
+    await state.start_token_cleanup()
     print(f"[HashPass] Initial difficulty: {state.difficulty}")
     print(f"[HashPass] Target time range: {state.target_time_min}-{state.target_time_max}s")
 
@@ -50,6 +52,8 @@ async def lifespan(app: FastAPI):
         print("[HashPass] Timeout checker stopped")
     await state.stop_hashrate_aggregation()
     print("[HashPass] Hashrate aggregation stopped")
+    await state.stop_token_cleanup()
+    print("[HashPass] Session token cleanup stopped")
 
     # 关闭进程池
     shutdown_process_pool(wait=True)

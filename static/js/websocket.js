@@ -191,10 +191,29 @@ export function connectWebSocket(isReconnect = false) {
   };
 
   state.ws.onclose = (event) => {
-    log("❌ WebSocket 连接已断开", "warning");
+    log(`❌ WebSocket 连接已断开 (code: ${event.code})`, "warning");
     updateWsStatus("disconnected", "已断开");
     stopWsPing();
     resetNetworkHashRate();
+
+    // 检查是否是 Token 验证失败（1008 = Policy Violation）
+    if (event.code === 1008) {
+      // 清除 Session Token（已失效）
+      state.sessionToken = null;
+
+      // 检查是否尝试过用 Session Token 连接
+      // 如果有 Turnstile Token 但 Session Token 失效，说明需要重新验证
+      if (state.turnstileToken) {
+        log("⚠️ Session Token 验证失败，需要重新验证", "error");
+
+        // 触发 Turnstile 重新验证
+        import("./turnstile.js").then(({ turnstileManager }) => {
+          turnstileManager.requestRevalidation();
+        });
+
+        return; // 不再尝试自动重连
+      }
+    }
 
     // 自动重连（使用指数退避策略）
     attemptReconnect();
@@ -208,6 +227,12 @@ function attemptReconnect() {
   // 检查是否有可用的 token
   if (!state.sessionToken && !state.turnstileToken) {
     log("⚠️ 无可用 Token，请刷新页面重新验证", "warning");
+
+    // 触发 Turnstile 重新验证
+    import("./turnstile.js").then(({ turnstileManager }) => {
+      turnstileManager.requestRevalidation();
+    });
+
     return;
   }
 
@@ -219,11 +244,20 @@ function attemptReconnect() {
   // 最大重连次数限制
   const maxAttempts = 10;
   if (state.reconnectAttempts >= maxAttempts) {
-    log("⚠️ 达到最大重连次数，请刷新页面", "error");
+    log("⚠️ 达到最大重连次数，需要重新验证", "error");
     const statusText = document.getElementById("statusText");
     if (statusText) {
-      statusText.textContent = "连接失败，请刷新页面";
+      statusText.textContent = "连接失败，需要重新验证";
     }
+
+    // 清除 Session Token（可能已失效）
+    state.sessionToken = null;
+
+    // 触发 Turnstile 重新验证
+    import("./turnstile.js").then(({ turnstileManager }) => {
+      turnstileManager.requestRevalidation();
+    });
+
     return;
   }
 

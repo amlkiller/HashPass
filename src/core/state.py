@@ -58,11 +58,14 @@ class SystemState:
         self.session_tokens: Dict[str, Dict[str, Any]] = {}
         # 结构: {
         #   "token_string": {
-        #     "websocket": <WebSocket对象>,
+        #     "websocket": <WebSocket对象或None>,
         #     "ip": "203.0.113.45",
-        #     "created_at": 1704712800.0
+        #     "created_at": 1704712800.0,
+        #     "disconnected_at": None或时间戳,  # WebSocket断开时间
+        #     "is_connected": True/False         # 当前是否连接
         #   }
         # }
+        self.token_expiry_seconds = 300  # Token未连接过期时间：5分钟
 
         # 客户端算力跟踪
         self.client_hashrates: Dict[WebSocket, Dict[str, float]] = {}
@@ -72,6 +75,9 @@ class SystemState:
 
         # 超时检查任务
         self.timeout_task: Optional[asyncio.Task] = None
+
+        # Session Token 清理任务
+        self.cleanup_task: Optional[asyncio.Task] = None
 
     def reset_puzzle(self):
         """重置谜题（获胜后调用）"""
@@ -369,7 +375,9 @@ class SystemState:
         self.session_tokens[token] = {
             "websocket": websocket,
             "ip": ip,
-            "created_at": time.time()
+            "created_at": time.time(),
+            "disconnected_at": None,
+            "is_connected": True
         }
         print(f"[Session Token] ✓ 生成 Token for IP {ip} (连接数: {len(self.session_tokens)})")
         return token
@@ -395,25 +403,117 @@ class SystemState:
             print(f"[Session Token] ✗ IP 不匹配: Token IP={token_data['ip']}, Request IP={request_ip}")
             return False
 
+        # 检查是否已过期（未连接超过5分钟）
+        if not token_data["is_connected"]:
+            disconnected_at = token_data.get("disconnected_at")
+            if disconnected_at is not None:
+                time_since_disconnect = time.time() - disconnected_at
+                if time_since_disconnect > self.token_expiry_seconds:
+                    print(f"[Session Token] ✗ Token 已过期 (断开 {time_since_disconnect:.1f}s > {self.token_expiry_seconds}s)")
+                    return False
+
         return True
 
     def revoke_session_token(self, websocket: WebSocket) -> None:
         """
-        撤销与 WebSocket 关联的所有 Session Token
+        标记与 WebSocket 关联的所有 Session Token 为未连接状态
+        Token 不会立即删除，而是在5分钟未连接后由清理任务删除
 
         Args:
-            websocket: 要撤销 Token 的 WebSocket 连接
+            websocket: 要标记 Token 的 WebSocket 连接
         """
         # 找到该 WebSocket 对应的所有 Token
-        tokens_to_remove = [
-            token for token, data in self.session_tokens.items()
-            if data["websocket"] == websocket
-        ]
+        for token, data in self.session_tokens.items():
+            if data["websocket"] == websocket:
+                # 标记为未连接
+                data["is_connected"] = False
+                data["disconnected_at"] = time.time()
+                data["websocket"] = None  # 清除 WebSocket 引用，避免内存泄漏
+                print(f"[Session Token] ⏱️ Token 标记为未连接 (将在5分钟后过期，剩余: {len(self.session_tokens)})")
 
-        # 删除找到的 Token
+    def reconnect_session_token(self, token: str, websocket: WebSocket) -> bool:
+        """
+        重新激活已断开的 Session Token（用于 WebSocket 重连）
+
+        Args:
+            token: 要重新激活的 Token
+            websocket: 新的 WebSocket 连接对象
+
+        Returns:
+            True 如果成功重连，False 如果 Token 不存在
+        """
+        if token not in self.session_tokens:
+            return False
+
+        token_data = self.session_tokens[token]
+        token_data["websocket"] = websocket
+        token_data["is_connected"] = True
+        token_data["disconnected_at"] = None
+
+        print(f"[Session Token] ✓ Token 重连成功 (IP: {token_data['ip']})")
+        return True
+
+    async def start_token_cleanup(self) -> None:
+        """启动 Session Token 清理任务（每分钟检查一次）"""
+        if self.cleanup_task is not None:
+            return
+
+        async def cleanup_loop():
+            while True:
+                try:
+                    await asyncio.sleep(60.0)  # 每60秒检查一次
+                    expired_count = await self._cleanup_expired_tokens()
+                    if expired_count > 0:
+                        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        print(
+                            f"[{timestamp}] [Session Token Cleanup] "
+                            f"已清理 {expired_count} 个过期 Token | "
+                            f"剩余: {len(self.session_tokens)}"
+                        )
+                except asyncio.CancelledError:
+                    print("[Session Token Cleanup] 任务已取消")
+                    break
+                except Exception as e:
+                    print(f"[Session Token Cleanup] 错误: {e}")
+
+        self.cleanup_task = asyncio.create_task(cleanup_loop())
+        print("[Session Token Cleanup] ✓ 清理任务已启动")
+
+    async def stop_token_cleanup(self) -> None:
+        """停止 Session Token 清理任务"""
+        if self.cleanup_task is not None:
+            self.cleanup_task.cancel()
+            try:
+                await self.cleanup_task
+            except asyncio.CancelledError:
+                pass
+            self.cleanup_task = None
+
+    async def _cleanup_expired_tokens(self) -> int:
+        """
+        清理未连接超过5分钟的 Session Token
+
+        Returns:
+            清理的 Token 数量
+        """
+        current_time = time.time()
+        tokens_to_remove = []
+
+        for token, data in self.session_tokens.items():
+            # 只清理未连接状态的 Token
+            if not data["is_connected"]:
+                disconnected_at = data.get("disconnected_at")
+                if disconnected_at is not None:
+                    time_since_disconnect = current_time - disconnected_at
+                    # 超过5分钟未连接，标记为待删除
+                    if time_since_disconnect > self.token_expiry_seconds:
+                        tokens_to_remove.append(token)
+
+        # 批量删除过期 Token
         for token in tokens_to_remove:
             del self.session_tokens[token]
-            print(f"[Session Token] ✓ 已撤销 Token (剩余: {len(self.session_tokens)})")
+
+        return len(tokens_to_remove)
 
 
 # 全局单例

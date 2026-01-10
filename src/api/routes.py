@@ -310,6 +310,15 @@ async def websocket_endpoint(websocket: WebSocket):
     if is_session_token:
         # Session Token 验证成功，重连场景
         print(f"[WebSocket] Reconnecting with Session Token from IP {real_ip}")
+
+        # 接受连接
+        await websocket.accept()
+        state.active_connections.add(websocket)
+
+        # 重新激活 Token（更新 WebSocket 引用和连接状态）
+        state.reconnect_session_token(token, websocket)
+        print(f"[WebSocket] Reconnected successfully using existing Session Token")
+
     else:
         # 尝试验证 Turnstile Token（首次连接场景）
         is_valid, error_message = await verify_turnstile_token(token, real_ip)
@@ -323,20 +332,17 @@ async def websocket_endpoint(websocket: WebSocket):
 
         print(f"[WebSocket] New connection from IP {real_ip} (Turnstile verified)")
 
-    # 4. Token 验证通过，接受连接
-    await websocket.accept()
-    state.active_connections.add(websocket)
+        # 接受连接
+        await websocket.accept()
+        state.active_connections.add(websocket)
 
-    # 5. 生成并下发 Session Token（仅在首次连接时生成新的）
-    if not is_session_token:
+        # 生成并下发 Session Token（仅在首次连接时生成新的）
         session_token = state.generate_session_token(websocket, real_ip)
         await websocket.send_json({
             "type": "SESSION_TOKEN",
             "token": session_token
         })
         print(f"[WebSocket] Session Token sent to {real_ip}")
-    else:
-        print(f"[WebSocket] Reconnected successfully using existing Session Token")
 
     try:
         # 保持连接活跃，监听客户端消息（如心跳）

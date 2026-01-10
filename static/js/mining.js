@@ -88,9 +88,9 @@ async function submitSolution(result, submittedSeed, traceData) {
 export async function startMining() {
   if (state.mining) return;
 
-  // 检查 Turnstile Token
-  if (!state.turnstileToken) {
-    log("请先完成人机验证", "error");
+  // 检查 Session Token（真正用于 API 请求的凭证）
+  if (!state.sessionToken) {
+    log("请先完成人机验证并建立连接", "error");
     return;
   }
 
