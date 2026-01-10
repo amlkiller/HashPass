@@ -387,17 +387,17 @@ async def websocket_endpoint(websocket: WebSocket):
                     print(f"[WebSocket] 无效算力值来自 {real_ip}: {rate}")
 
     except WebSocketDisconnect:
-        state.active_connections.discard(websocket)
-        await state.remove_client_hashrate(websocket)
-        state.stop_miner(websocket)  # 断开连接时停止挖矿计时
-        state.revoke_session_token(websocket)  # ← 新增：清理 Token
         print(f"[WebSocket] Client disconnected: {real_ip}")
     except Exception as e:
+        print(f"[WebSocket] Error: {e}")
+    finally:
+        # ===== 关键修复：确保所有退出路径都清理资源 =====
+        # 无论是正常断开、异常还是其他情况，都必须清理连接
         state.active_connections.discard(websocket)
         await state.remove_client_hashrate(websocket)
-        state.stop_miner(websocket)  # 异常断开时也停止挖矿计时
-        state.revoke_session_token(websocket)  # ← 新增：清理 Token
-        print(f"[WebSocket] Error: {e}")
+        state.stop_miner(websocket)  # 停止挖矿计时
+        state.revoke_session_token(websocket)  # 清理 Session Token
+        print(f"[WebSocket] Connection cleaned up for {real_ip}")
 
 
 @router.get("/turnstile/config")

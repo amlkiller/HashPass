@@ -246,17 +246,21 @@ class SystemState:
             }
         )
 
+        # ===== 关键修复：先将 set 转为 list，避免并发修改导致 zip 不匹配 =====
+        connections_snapshot = list(self.active_connections)
+
         # 并行发送消息到所有连接
         tasks = [
-            connection.send_text(message) for connection in self.active_connections
+            connection.send_text(message) for connection in connections_snapshot
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # 清理发送失败的连接
         disconnected = set()
-        for connection, result in zip(self.active_connections, results):
+        for connection, result in zip(connections_snapshot, results):
             if isinstance(result, Exception):
                 disconnected.add(connection)
+                print(f"[Broadcast] Failed to send PUZZLE_RESET to connection: {result}")
 
         self.active_connections -= disconnected
 
@@ -271,17 +275,21 @@ class SystemState:
             }
         )
 
+        # ===== 关键修复：先将 set 转为 list，避免并发修改导致 zip 不匹配 =====
+        connections_snapshot = list(self.active_connections)
+
         # 并行发送消息到所有连接
         tasks = [
-            connection.send_text(message) for connection in self.active_connections
+            connection.send_text(message) for connection in connections_snapshot
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # 清理发送失败的连接
         disconnected = set()
-        for connection, result in zip(self.active_connections, results):
+        for connection, result in zip(connections_snapshot, results):
             if isinstance(result, Exception):
                 disconnected.add(connection)
+                # 不打印日志，避免刷屏（hashrate 每5秒广播一次）
 
         self.active_connections -= disconnected
 
