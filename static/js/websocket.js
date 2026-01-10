@@ -1,12 +1,11 @@
 /**
  * WebSocket 连接和消息处理模块
- * 管理实时通信、心跳、消息分发等功能
+ * 管理实时通信、心跳、消息分发、自动重连等功能
  */
 
 import { state } from "./state.js";
 import { log } from "./logger.js";
 import { updateNetworkHashRate, resetNetworkHashRate } from "./hashrate.js";
-import { turnstileManager } from "./turnstile.js";
 
 /**
  * 更新 WebSocket 状态显示
@@ -134,27 +133,41 @@ function handleWebSocketMessage(data) {
 
 /**
  * 连接 WebSocket
+ * @param {boolean} isReconnect - 是否为重连（默认 false）
  */
-export function connectWebSocket() {
-  // 检查 Turnstile Token
-  if (!state.turnstileToken) {
-    log("WebSocket: 等待 Turnstile 验证...", "warning");
+export function connectWebSocket(isReconnect = false) {
+  // 优先使用 Session Token，否则使用 Turnstile Token
+  const token = state.sessionToken || state.turnstileToken;
+
+  if (!token) {
+    log("WebSocket: 等待验证...", "warning");
     updateWsStatus("disconnected", "等待验证");
     return;
   }
 
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const wsUrl = `${protocol}//${window.location.host}/api/ws?token=${encodeURIComponent(state.turnstileToken)}`;
+  const wsUrl = `${protocol}//${window.location.host}/api/ws?token=${encodeURIComponent(token)}`;
 
   // 设置连接中状态
+  if (isReconnect) {
+    log("🔄 正在重新连接 WebSocket...");
+  } else {
+    log("🔄 正在连接 WebSocket...");
+  }
   updateWsStatus("connecting", "连接中");
-  log("🔄 正在连接 WebSocket...");
 
   state.ws = new WebSocket(wsUrl);
 
   state.ws.onopen = () => {
-    log("📡 WebSocket 已连接");
+    if (isReconnect) {
+      log("✅ WebSocket 重连成功");
+    } else {
+      log("📡 WebSocket 已连接");
+    }
     updateWsStatus("connected", "已连接");
+
+    // 清除重连计数器
+    state.reconnectAttempts = 0;
 
     // 启动心跳
     startWsPing();
@@ -178,18 +191,55 @@ export function connectWebSocket() {
   };
 
   state.ws.onclose = (event) => {
-    log("❌ WebSocket 连接已断开，请刷新页面重新连接", "error");
-    updateWsStatus("error", "连接断开");
+    log("❌ WebSocket 连接已断开", "warning");
+    updateWsStatus("disconnected", "已断开");
     stopWsPing();
     resetNetworkHashRate();
 
-    // 禁用 UI，要求用户刷新页面
-    turnstileManager.disableUI();
+    // 自动重连（使用指数退避策略）
+    attemptReconnect();
+  };
+}
 
-    // 显示明确的刷新提示
+/**
+ * 尝试重连 WebSocket
+ */
+function attemptReconnect() {
+  // 检查是否有可用的 token
+  if (!state.sessionToken && !state.turnstileToken) {
+    log("⚠️ 无可用 Token，请刷新页面重新验证", "warning");
+    return;
+  }
+
+  // 初始化重连计数器
+  if (state.reconnectAttempts === undefined) {
+    state.reconnectAttempts = 0;
+  }
+
+  // 最大重连次数限制
+  const maxAttempts = 10;
+  if (state.reconnectAttempts >= maxAttempts) {
+    log("⚠️ 达到最大重连次数，请刷新页面", "error");
     const statusText = document.getElementById("statusText");
     if (statusText) {
-      statusText.textContent = "连接已断开，请刷新页面";
+      statusText.textContent = "连接失败，请刷新页面";
     }
-  };
+    return;
+  }
+
+  state.reconnectAttempts++;
+
+  // 指数退避：2^n 秒，最大 30 秒
+  const delay = Math.min(1000 * Math.pow(2, state.reconnectAttempts - 1), 30000);
+
+  log(`⏳ ${delay / 1000} 秒后尝试重连 (${state.reconnectAttempts}/${maxAttempts})`, "info");
+
+  // 清除旧的重连定时器
+  if (state.reconnectTimer) {
+    clearTimeout(state.reconnectTimer);
+  }
+
+  state.reconnectTimer = setTimeout(() => {
+    connectWebSocket(true); // isReconnect = true
+  }, delay);
 }

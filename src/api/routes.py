@@ -288,43 +288,55 @@ kex=none"""
 async def websocket_endpoint(websocket: WebSocket):
     """
     WebSocket 连接端点 - 用于广播 puzzle 重置通知
-    需要在 Query Parameter 中传递 Turnstile Token
+    支持两种认证方式：
+    1. 首次连接：使用 Turnstile Token (query param: token)
+    2. 重连：使用 Session Token (query param: token)
     """
     # 1. 从 Query Parameter 获取 Token
     token = websocket.query_params.get("token")
 
     if not token:
         await websocket.close(
-            code=1008, reason="Missing Turnstile token in query parameter"
+            code=1008, reason="Missing token in query parameter"
         )
         return
 
     # 2. 获取客户端 IP
     real_ip = websocket.headers.get("cf-connecting-ip") or websocket.client.host
 
-    # 3. 验证 Token
-    is_valid, error_message = await verify_turnstile_token(token, real_ip)
+    # 3. 验证 Token (优先验证 Session Token，失败则验证 Turnstile Token)
+    is_session_token = state.validate_session_token(token, real_ip)
 
-    if not is_valid:
-        print(f"[WebSocket] Token validation failed for IP {real_ip}: {error_message}")
-        await websocket.close(
-            code=1008, reason=error_message or "Invalid Turnstile token"
-        )
-        return
+    if is_session_token:
+        # Session Token 验证成功，重连场景
+        print(f"[WebSocket] Reconnecting with Session Token from IP {real_ip}")
+    else:
+        # 尝试验证 Turnstile Token（首次连接场景）
+        is_valid, error_message = await verify_turnstile_token(token, real_ip)
+
+        if not is_valid:
+            print(f"[WebSocket] Token validation failed for IP {real_ip}: {error_message}")
+            await websocket.close(
+                code=1008, reason=error_message or "Invalid token"
+            )
+            return
+
+        print(f"[WebSocket] New connection from IP {real_ip} (Turnstile verified)")
 
     # 4. Token 验证通过，接受连接
     await websocket.accept()
     state.active_connections.add(websocket)
-    print(f"[WebSocket] New connection from IP {real_ip} (verified)")
 
-    # ===== 新增：生成并下发 Session Token =====
-    session_token = state.generate_session_token(websocket, real_ip)
-    await websocket.send_json({
-        "type": "SESSION_TOKEN",
-        "token": session_token
-    })
-    print(f"[WebSocket] Session Token sent to {real_ip}")
-    # ===== 新增结束 =====
+    # 5. 生成并下发 Session Token（仅在首次连接时生成新的）
+    if not is_session_token:
+        session_token = state.generate_session_token(websocket, real_ip)
+        await websocket.send_json({
+            "type": "SESSION_TOKEN",
+            "token": session_token
+        })
+        print(f"[WebSocket] Session Token sent to {real_ip}")
+    else:
+        print(f"[WebSocket] Reconnected successfully using existing Session Token")
 
     try:
         # 保持连接活跃，监听客户端消息（如心跳）

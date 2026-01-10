@@ -15,6 +15,8 @@ export const state = {
   ws: null,
   wsPingTimer: null,
   onlineCount: 0,
+  reconnectAttempts: 0,
+  reconnectTimer: null,
 
   // Turnstile 状态
   turnstileToken: null,
