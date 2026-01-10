@@ -92,34 +92,22 @@ export const turnstileManager = {
 
   /**
    * Token 过期回调
-   * 不自动触发重新验证，只记录日志
+   * Token过期仅记录日志，不触发任何操作
+   * 用户会话依赖 Session Token，与 Turnstile Token 无关
    */
   onExpired() {
-    log("⚠️ Turnstile Token 已过期（后台）", "warning");
-    // 不再自动显示容器和重置 Widget
-    // 只有在 WebSocket 重连失败时才会触发重新验证
+    log("ℹ️ Turnstile Token 已过期（无影响，Session Token 仍然有效）", "info");
+    // 不做任何操作 - Session Token 仍然有效
   },
 
   /**
-   * 手动触发重新验证
-   * 仅在 WebSocket Session Token 失效时调用
+   * 手动触发重新验证（已废弃）
+   * 此方法保留仅用于向后兼容，实际上不应该被调用
+   * @deprecated 用户会话全生命周期只需验证一次
    */
   requestRevalidation() {
-    log("⚠️ Session Token 无效，请重新验证", "warning");
-
-    // 显示 Turnstile 容器
-    const turnstileContainer = document.getElementById("turnstileContainer");
-    if (turnstileContainer) {
-      turnstileContainer.classList.remove("hidden");
-    }
-
-    // 重置 Turnstile Widget（触发新的验证）
-    if (state.turnstileWidgetId !== null) {
-      window.turnstile.reset(state.turnstileWidgetId);
-    }
-
-    // 禁用 UI
-    this.disableUI();
+    log("⚠️ 已废弃：不再支持重新验证，请刷新页面", "warning");
+    // 不再触发重新验证
   },
 
   /**

@@ -72,9 +72,9 @@ async function submitSolution(result, submittedSeed, traceData) {
     document.getElementById("result").style.display = "block";
     document.getElementById("inviteCode").value = data.invite_code;
   } else if (response.status === 401) {
-    // ← 新增：处理 401 错误
-    log("❌ Session Token 无效或已过期，请刷新页面", "error");
-    alert("会话已失效，请刷新页面重新验证");
+    // 处理 Session Token 失效
+    log("❌ Session 已失效，请刷新页面", "error");
+    alert("会话已失效，请刷新页面重新开始");
     stopMining();
   } else {
     const error = await response.json();
@@ -132,8 +132,8 @@ export async function startMining() {
 
     // 处理 401 错误
     if (puzzleResponse.status === 401) {
-      log("❌ Session Token 无效或已过期，请刷新页面", "error");
-      alert("会话已失效，请刷新页面重新验证");
+      log("❌ Session 已失效，请刷新页面", "error");
+      alert("会话已失效，请刷新页面重新开始");
       stopMining();
       return;
     }

@@ -198,21 +198,19 @@ export function connectWebSocket(isReconnect = false) {
 
     // 检查是否是 Token 验证失败（1008 = Policy Violation）
     if (event.code === 1008) {
-      // 清除 Session Token（已失效）
-      state.sessionToken = null;
+      log("❌ Session 已失效，请刷新页面", "error");
+      updateWsStatus("error", "会话失效");
 
-      // 检查是否尝试过用 Session Token 连接
-      // 如果有 Turnstile Token 但 Session Token 失效，说明需要重新验证
-      if (state.turnstileToken) {
-        log("⚠️ Session Token 验证失败，需要重新验证", "error");
-
-        // 触发 Turnstile 重新验证
-        import("./turnstile.js").then(({ turnstileManager }) => {
-          turnstileManager.requestRevalidation();
-        });
-
-        return; // 不再尝试自动重连
+      const statusText = document.getElementById("statusText");
+      if (statusText) {
+        statusText.textContent = "会话已失效，请刷新页面";
       }
+
+      // 禁用挖矿功能
+      document.getElementById("startBtn").disabled = true;
+      document.getElementById("stopBtn").disabled = true;
+
+      return; // 不再尝试自动重连
     }
 
     // 自动重连（使用指数退避策略）
@@ -224,14 +222,19 @@ export function connectWebSocket(isReconnect = false) {
  * 尝试重连 WebSocket
  */
 function attemptReconnect() {
-  // 检查是否有可用的 token
+  // 检查是否有可用的 token（优先Session Token，否则用Turnstile Token）
   if (!state.sessionToken && !state.turnstileToken) {
-    log("⚠️ 无可用 Token，请刷新页面重新验证", "warning");
+    log("❌ 无可用 Token，请刷新页面", "error");
+    updateWsStatus("error", "无有效Token");
 
-    // 触发 Turnstile 重新验证
-    import("./turnstile.js").then(({ turnstileManager }) => {
-      turnstileManager.requestRevalidation();
-    });
+    const statusText = document.getElementById("statusText");
+    if (statusText) {
+      statusText.textContent = "会话已失效，请刷新页面";
+    }
+
+    // 禁用挖矿功能
+    document.getElementById("startBtn").disabled = true;
+    document.getElementById("stopBtn").disabled = true;
 
     return;
   }
@@ -244,19 +247,17 @@ function attemptReconnect() {
   // 最大重连次数限制
   const maxAttempts = 10;
   if (state.reconnectAttempts >= maxAttempts) {
-    log("⚠️ 达到最大重连次数，需要重新验证", "error");
+    log("❌ 达到最大重连次数，请刷新页面", "error");
+    updateWsStatus("error", "重连失败");
+
     const statusText = document.getElementById("statusText");
     if (statusText) {
-      statusText.textContent = "连接失败，需要重新验证";
+      statusText.textContent = "连接失败，请刷新页面";
     }
 
-    // 清除 Session Token（可能已失效）
-    state.sessionToken = null;
-
-    // 触发 Turnstile 重新验证
-    import("./turnstile.js").then(({ turnstileManager }) => {
-      turnstileManager.requestRevalidation();
-    });
+    // 禁用挖矿功能
+    document.getElementById("startBtn").disabled = true;
+    document.getElementById("stopBtn").disabled = true;
 
     return;
   }
