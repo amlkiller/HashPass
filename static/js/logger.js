@@ -5,6 +5,9 @@
 
 import { escapeHtml } from "./utils.js";
 
+// 日志配置
+const MAX_LOG_ENTRIES = 200; // 最大日志条目数，超过后自动删除旧日志
+
 /**
  * 输出日志到日志面板
  * @param {string} message - 日志消息
@@ -82,5 +85,11 @@ export function log(message, type = "info") {
   `;
 
   logBox.appendChild(logEntry);
+
+  // 限制日志条目数量，防止 DOM 过大导致浏览器卡死
+  while (logBox.children.length > MAX_LOG_ENTRIES) {
+    logBox.removeChild(logBox.firstChild); // 删除最旧的日志
+  }
+
   logBox.scrollTop = logBox.scrollHeight;
 }
