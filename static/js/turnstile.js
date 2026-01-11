@@ -37,6 +37,7 @@ export const turnstileManager = {
         "error-callback": () => this.onError(),
         "expired-callback": () => this.onExpired(),
         "timeout-callback": () => this.onTimeout(),
+        "refresh-expired": "never",
         theme:
           document.documentElement.getAttribute("data-theme") === "light"
             ? "light"
@@ -96,7 +97,7 @@ export const turnstileManager = {
    * 用户会话依赖 Session Token，与 Turnstile Token 无关
    */
   onExpired() {
-    log("ℹ️ Turnstile Token 已过期（无影响，Session Token 仍然有效）", "info");
+    log("ℹ️ Turnstile Token 已过期（Session Token 仍然有效）", "info");
     // 不做任何操作 - Session Token 仍然有效
   },
 
@@ -106,7 +107,7 @@ export const turnstileManager = {
    * @deprecated 用户会话全生命周期只需验证一次
    */
   requestRevalidation() {
-    log("⚠️ 已废弃：不再支持重新验证，请刷新页面", "warning");
+    log("⚠️ 不再支持重新验证，请刷新页面", "warning");
     // 不再触发重新验证
   },
 
