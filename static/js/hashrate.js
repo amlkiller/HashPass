@@ -46,7 +46,7 @@ export function updateNetworkHashRate(totalHashrate, activeMiners) {
   networkHashRateValue.textContent = formattedRate.value;
   networkHashRateValue.classList.remove("inactive");
   networkHashRateDisplay.classList.add("active");
-  networkMiners.textContent = `${activeMiners}人在线`;
+  networkMiners.textContent = `${activeMiners} 人在线`;
 }
 
 /**
@@ -60,5 +60,5 @@ export function resetNetworkHashRate() {
   networkHashRateValue.textContent = "--";
   networkHashRateValue.classList.add("inactive");
   networkHashRateDisplay.classList.remove("active");
-  networkMiners.textContent = "0人在线";
+  networkMiners.textContent = "0 人在线";
 }

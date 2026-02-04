@@ -40,7 +40,7 @@ window.copyCode = copyCode;
     const fp = await getFingerprint();
     state.visitorId = fp.hash || fp;
     document.getElementById("fingerprint").textContent = state.visitorId;
-    log(`设备指纹: ${state.visitorId}`);
+    log(`设备 ID: ${state.visitorId}`);
 
     // 4. 初始化 Turnstile（验证成功后会自动启用 UI 和建立 WebSocket）
     await turnstileManager.init();

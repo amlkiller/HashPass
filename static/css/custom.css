@@ -1,0 +1,490 @@
+/* HashPass - Custom Styles (Tailwind CDN cannot implement) */
+
+/* ==================== Theme Variables ==================== */
+
+/* Dark Theme (Default) */
+:root,
+[data-theme="dark"] {
+    --bg-primary: #000000;
+    --bg-secondary: #111111;
+    --bg-tertiary: #1a1a1a;
+    --bg-hover: #222222;
+    --border-color: #333333;
+    --border-hover: #444444;
+    --text-primary: #ffffff;
+    --text-secondary: #888888;
+    --text-tertiary: #666666;
+    --accent: #ffffff;
+    --accent-hover: #e0e0e0;
+    --success: #0070f3;
+    --success-bg: rgba(0, 112, 243, 0.1);
+    --error: #ff0080;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+/* Light Theme */
+[data-theme="light"] {
+    --bg-primary: #ffffff;
+    --bg-secondary: #fafafa;
+    --bg-tertiary: #f5f5f5;
+    --bg-hover: #f0f0f0;
+    --border-color: #e5e5e5;
+    --border-hover: #d0d0d0;
+    --text-primary: #000000;
+    --text-secondary: #666666;
+    --text-tertiary: #999999;
+    --accent: #000000;
+    --accent-hover: #333333;
+    --success: #0070f3;
+    --success-bg: rgba(0, 112, 243, 0.08);
+    --error: #ff0080;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.16);
+}
+
+/* ==================== Keyframe Animations ==================== */
+
+/* Pulse Animation (Generic) */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Pulse Dot Animation (Status Indicator) */
+@keyframes pulse-dot {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
+}
+
+/* Pulse Glow Animation (Hash Rate) */
+@keyframes pulse-glow {
+    0%, 100% {
+        text-shadow:
+            0 0 30px rgba(0, 112, 243, 0.5),
+            0 0 60px rgba(0, 112, 243, 0.2);
+    }
+    50% {
+        text-shadow:
+            0 0 40px rgba(0, 112, 243, 0.7),
+            0 0 80px rgba(0, 112, 243, 0.3);
+    }
+}
+
+/* Shimmer Animation (Hash Rate Active) */
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* Slide In Animation (Result Card) */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Log Fade In Animation */
+@keyframes logFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Button Spin Animation (Loading State) */
+@keyframes button-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ==================== Animation Utility Classes ==================== */
+
+.animate-pulse-dot {
+    animation: pulse-dot 2s infinite;
+}
+
+.animate-pulse-dot-fast {
+    animation: pulse-dot 1s infinite;
+}
+
+.animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+    animation: shimmer 3s infinite;
+}
+
+.animate-slide-in {
+    animation: slideIn 0.4s ease-out;
+}
+
+.animate-log-fade-in {
+    animation: logFadeIn 0.3s ease-out forwards;
+}
+
+.animate-button-spin {
+    animation: button-spin 0.6s linear infinite;
+}
+
+/* ==================== Progress Bar Styles ==================== */
+
+progress {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+progress::-webkit-progress-bar {
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+}
+
+progress::-webkit-progress-value {
+    background: linear-gradient(90deg, var(--success) 0%, var(--accent) 100%);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+progress::-moz-progress-bar {
+    background: linear-gradient(90deg, var(--success) 0%, var(--accent) 100%);
+    border-radius: 3px;
+}
+
+/* ==================== Scrollbar Styles ==================== */
+
+.log-box::-webkit-scrollbar {
+    width: 8px;
+}
+
+.log-box::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 4px;
+}
+
+.log-box::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+    border: 2px solid var(--bg-secondary);
+    transition: background 0.2s ease;
+}
+
+.log-box::-webkit-scrollbar-thumb:hover {
+    background: var(--text-tertiary);
+}
+
+/* Firefox Scrollbar */
+.log-box {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) var(--bg-secondary);
+}
+
+/* ==================== WebSocket Status Badge (Data Attributes) ==================== */
+
+.status-badge[data-status="connected"] .status-dot {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.status-badge[data-status="connected"] .status-text {
+    color: #10b981;
+}
+
+.status-badge[data-status="connecting"] .status-dot {
+    background: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+}
+
+.status-badge[data-status="connecting"] .status-text {
+    color: #f59e0b;
+}
+
+.status-badge[data-status="disconnected"] .status-dot {
+    background: #6b7280;
+}
+
+.status-badge[data-status="disconnected"] .status-text {
+    color: var(--text-tertiary);
+}
+
+.status-badge[data-status="error"] .status-dot {
+    background: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+.status-badge[data-status="error"] .status-text {
+    color: #ef4444;
+}
+
+/* ==================== Hash Rate Display States ==================== */
+
+/* Shimmer line pseudo-element */
+.hash-rate-display::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--success), transparent);
+    transition: left 0.6s ease;
+}
+
+.hash-rate-display.active::before {
+    left: 100%;
+    animation: shimmer 3s infinite;
+}
+
+/* Local Hash Rate (Green) */
+.hash-rate-display.local .hash-rate-value:not(.inactive) {
+    color: #10b981;
+    text-shadow:
+        0 0 30px rgba(16, 185, 129, 0.5),
+        0 0 60px rgba(16, 185, 129, 0.2);
+}
+
+/* Network Hash Rate (Blue) */
+.hash-rate-display.network .hash-rate-value:not(.inactive) {
+    color: var(--success);
+    text-shadow:
+        0 0 30px rgba(0, 112, 243, 0.5),
+        0 0 60px rgba(0, 112, 243, 0.2);
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Inactive State */
+.hash-rate-value.inactive {
+    color: var(--text-tertiary) !important;
+    text-shadow: none !important;
+    animation: none !important;
+}
+
+/* Active Background States */
+.hash-rate-display.active {
+    background: linear-gradient(
+        135deg,
+        rgba(0, 112, 243, 0.18) 0%,
+        rgba(0, 112, 243, 0.08) 50%,
+        rgba(0, 112, 243, 0.12) 100%
+    ) !important;
+}
+
+.hash-rate-display.local.active {
+    background: linear-gradient(
+        135deg,
+        rgba(16, 185, 129, 0.15) 0%,
+        rgba(16, 185, 129, 0.05) 100%
+    ) !important;
+}
+
+/* ==================== Button Ripple Effect ==================== */
+
+.btn-ripple::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn-ripple:active::before {
+    width: 300px;
+    height: 300px;
+}
+
+/* ==================== Button Loading State ==================== */
+
+.btn-loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+}
+
+.btn-loading::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: button-spin 0.6s linear infinite;
+}
+
+/* ==================== Result Card Title Icon ==================== */
+
+.result-title::before {
+    content: "\1F389";
+    font-size: 1.5rem;
+    margin-right: 0.5rem;
+}
+
+/* ==================== Log Header Icon ==================== */
+
+.log-header-title::before {
+    content: "\1F4CB";
+    font-size: 1.25rem;
+    margin-right: 0.5rem;
+}
+
+/* ==================== Header Gradient Text ==================== */
+
+.gradient-text {
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ==================== Log Header Accent Bar ==================== */
+
+.log-header-bar::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--success) 0%, transparent 100%);
+    border-radius: 0 2px 2px 0;
+}
+
+/* ==================== Right Panel Gradient Fade ==================== */
+
+.right-panel-fade::before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(to top, var(--bg-secondary), transparent);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 1;
+}
+
+/* ==================== Turnstile Container Hidden State ==================== */
+
+.turnstile-hidden {
+    opacity: 0;
+    max-height: 0;
+    padding: 0 !important;
+    margin: 0;
+    gap: 0;
+    border: none !important;
+    overflow: hidden;
+    transition: opacity 0.3s ease, max-height 0.3s ease, padding 0.3s ease, margin 0.3s ease;
+}
+
+/* ==================== Accessibility ==================== */
+
+/* Focus Styles */
+button:focus-visible,
+input:focus-visible {
+    outline: 2px solid var(--success);
+    outline-offset: 2px;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+    :root,
+    [data-theme="dark"] {
+        --border-color: #555555;
+        --text-secondary: #aaaaaa;
+    }
+
+    [data-theme="light"] {
+        --border-color: #cccccc;
+        --text-secondary: #555555;
+    }
+}
+
+/* Screen Reader Only */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* ==================== Touch Interactions ==================== */
+
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+button {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* ==================== Print Styles ==================== */
+
+@media print {
+    body {
+        background: white !important;
+        color: black !important;
+    }
+
+    .theme-switcher,
+    .controls,
+    .turnstile-container {
+        display: none !important;
+    }
+
+    .left-panel,
+    .right-panel {
+        box-shadow: none !important;
+        border: 1px solid #000 !important;
+        page-break-inside: avoid;
+    }
+
+    .log-entry {
+        page-break-inside: avoid;
+    }
+}

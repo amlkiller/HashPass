@@ -40,9 +40,12 @@ export const themeManager = {
   setTheme(theme) {
     localStorage.setItem("theme", theme);
 
-    // 更新按钮激活状态
+    // 更新按钮激活状态 - 使用 Tailwind 类
+    const inactiveClasses = "theme-btn flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-transparent border-none rounded-md text-[var(--text-secondary)] cursor-pointer transition-all duration-200 hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]";
+    const activeClasses = "theme-btn active flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-[var(--bg-primary)] border-none rounded-md text-[var(--text-primary)] cursor-pointer transition-all duration-200 shadow-[var(--shadow-sm)]";
+
     document.querySelectorAll(".theme-btn").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.theme === theme);
+      btn.className = btn.dataset.theme === theme ? activeClasses : inactiveClasses;
     });
 
     // 应用主题

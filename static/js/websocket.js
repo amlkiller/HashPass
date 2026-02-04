@@ -16,12 +16,21 @@ import { updateNetworkHashRate, resetNetworkHashRate } from "./hashrate.js";
 function updateWsStatus(status, text, online = null) {
   const wsStatus = document.getElementById("wsStatus");
   const statusText = wsStatus.querySelector(".status-text");
+  const statusDot = wsStatus.querySelector(".status-dot");
 
   wsStatus.setAttribute("data-status", status);
 
+  // 更新状态点的动画类
+  statusDot.classList.remove("animate-pulse-dot", "animate-pulse-dot-fast");
+  if (status === "connected") {
+    statusDot.classList.add("animate-pulse-dot");
+  } else if (status === "connecting") {
+    statusDot.classList.add("animate-pulse-dot-fast");
+  }
+
   // 如果有在线人数，显示在状态文字中
   if (online !== null && status === "connected") {
-    statusText.textContent = `${text} (${online}人)`;
+    statusText.textContent = `${text} (${online})`;
   } else {
     statusText.textContent = text;
   }
@@ -76,7 +85,7 @@ export function sendHashrateToServer(rate) {
 export function notifyMiningStart() {
   if (state.ws && state.ws.readyState === WebSocket.OPEN) {
     state.ws.send(JSON.stringify({ type: "mining_start" }));
-    log("⏱️ 已通知服务器开始计时");
+    log("服务器计时已启动");
   }
 }
 
@@ -97,7 +106,7 @@ function handleWebSocketMessage(data) {
   // ===== 新增：处理 SESSION_TOKEN 消息 =====
   if (data.type === "SESSION_TOKEN") {
     state.sessionToken = data.token;
-    log("🔑 已接收 Session Token");
+    log("会话令牌已接收");
     return;
   }
   // ===== 新增结束 =====
@@ -107,15 +116,15 @@ function handleWebSocketMessage(data) {
     state.onlineCount = data.online;
     updateWsStatus("connected", "已连接", state.onlineCount);
   } else if (data.type === "PUZZLE_RESET") {
-    log("🔄 检测到新的 Puzzle，本轮结束！", "error");
-    log(`新 Seed: ${data.seed.substring(0, 16)}...`);
+    log("检测到新谜题，本轮已结束！", "error");
+    log(`新种子: ${data.seed.substring(0, 16)}...`);
 
     // 更新难度显示
     document.getElementById("difficulty").textContent = data.difficulty;
 
     // 如果正在挖矿，自动重启挖矿（继续竞争）
     if (state.mining) {
-      log("🔄 自动重新开始挖矿，继续竞争...");
+      log("正在自动重启挖矿...");
       // 动态导入 mining.js 以避免循环依赖
       import("./mining.js").then(({ stopMining, startMining }) => {
         stopMining();
@@ -141,7 +150,7 @@ export function connectWebSocket(isReconnect = false) {
 
   if (!token) {
     log("WebSocket: 等待验证...", "warning");
-    updateWsStatus("disconnected", "等待验证");
+    updateWsStatus("disconnected", "等待中");
     return;
   }
 
@@ -150,9 +159,9 @@ export function connectWebSocket(isReconnect = false) {
 
   // 设置连接中状态
   if (isReconnect) {
-    log("🔄 正在重新连接 WebSocket...");
+    log("正在重连 WebSocket...");
   } else {
-    log("🔄 正在连接 WebSocket...");
+    log("正在连接 WebSocket...");
   }
   updateWsStatus("connecting", "连接中");
 
@@ -160,9 +169,9 @@ export function connectWebSocket(isReconnect = false) {
 
   state.ws.onopen = () => {
     if (isReconnect) {
-      log("✅ WebSocket 重连成功");
+      log("WebSocket 已重连");
     } else {
-      log("📡 WebSocket 已连接");
+      log("WebSocket 已连接");
     }
     updateWsStatus("connected", "已连接");
 
@@ -180,7 +189,7 @@ export function connectWebSocket(isReconnect = false) {
       const data = JSON.parse(event.data);
       handleWebSocketMessage(data);
     } catch (error) {
-      log(`WebSocket 消息解析错误: ${error.message}`, "error");
+      log(`WebSocket 解析错误: ${error.message}`, "error");
     }
   };
 
@@ -191,19 +200,19 @@ export function connectWebSocket(isReconnect = false) {
   };
 
   state.ws.onclose = (event) => {
-    log(`❌ WebSocket 连接已断开 (code: ${event.code})`, "warning");
+    log(`WebSocket 已断开 (代码: ${event.code})`, "warning");
     updateWsStatus("disconnected", "已断开");
     stopWsPing();
     resetNetworkHashRate();
 
     // 检查是否是 Token 验证失败（1008 = Policy Violation）
     if (event.code === 1008) {
-      log("❌ Session 已失效，请刷新页面", "error");
-      updateWsStatus("error", "会话失效");
+      log("会话已过期，请刷新页面", "error");
+      updateWsStatus("error", "会话过期");
 
       const statusText = document.getElementById("statusText");
       if (statusText) {
-        statusText.textContent = "会话已失效，请刷新页面";
+        statusText.textContent = "会话过期，请刷新页面";
       }
 
       // 禁用挖矿功能
@@ -224,12 +233,12 @@ export function connectWebSocket(isReconnect = false) {
 function attemptReconnect() {
   // 检查是否有可用的 token（优先Session Token，否则用Turnstile Token）
   if (!state.sessionToken && !state.turnstileToken) {
-    log("❌ 无可用 Token，请刷新页面", "error");
-    updateWsStatus("error", "无有效Token");
+    log("无有效令牌，请刷新页面", "error");
+    updateWsStatus("error", "无令牌");
 
     const statusText = document.getElementById("statusText");
     if (statusText) {
-      statusText.textContent = "会话已失效，请刷新页面";
+      statusText.textContent = "会话过期，请刷新页面";
     }
 
     // 禁用挖矿功能
@@ -247,7 +256,7 @@ function attemptReconnect() {
   // 最大重连次数限制
   const maxAttempts = 10;
   if (state.reconnectAttempts >= maxAttempts) {
-    log("❌ 达到最大重连次数，请刷新页面", "error");
+    log("已达最大重连次数，请刷新页面", "error");
     updateWsStatus("error", "重连失败");
 
     const statusText = document.getElementById("statusText");
@@ -267,7 +276,7 @@ function attemptReconnect() {
   // 指数退避：2^n 秒，最大 30 秒
   const delay = Math.min(1000 * Math.pow(2, state.reconnectAttempts - 1), 30000);
 
-  log(`⏳ ${delay / 1000} 秒后尝试重连 (${state.reconnectAttempts}/${maxAttempts})`, "info");
+  log(`${delay / 1000}秒后重连 (${state.reconnectAttempts}/${maxAttempts})`, "info");
 
   // 清除旧的重连定时器
   if (state.reconnectTimer) {

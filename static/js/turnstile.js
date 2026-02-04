@@ -23,14 +23,14 @@ export const turnstileManager = {
       state.turnstilesiteKey = config.siteKey;
 
       if (config.testMode) {
-        log("⚠️ Turnstile 测试模式已启用", "warning");
+        log("Turnstile 测试模式已启用", "warning");
       }
 
       // 2. 等待 Turnstile API 加载
       await this.waitForTurnstile();
 
       // 3. 渲染 Widget
-      log("正在渲染 Turnstile Widget...");
+      log("正在渲染 Turnstile 组件...");
       state.turnstileWidgetId = window.turnstile.render("#turnstileWidget", {
         sitekey: state.turnstilesiteKey,
         callback: (token) => this.onSuccess(token),
@@ -44,7 +44,7 @@ export const turnstileManager = {
             : "dark",
       });
 
-      log("Turnstile Widget 已加载");
+      log("Turnstile 组件已加载");
     } catch (error) {
       log(`Turnstile 初始化失败: ${error.message}`, "error");
       this.disableUI();
@@ -62,7 +62,7 @@ export const turnstileManager = {
       }
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    throw new Error("Turnstile script 加载超时");
+    throw new Error("Turnstile 脚本加载超时");
   },
 
   /**
@@ -71,14 +71,14 @@ export const turnstileManager = {
    */
   onSuccess(token) {
     state.turnstileToken = token;
-    log("✅ Turnstile 验证成功", "success");
+    log("Turnstile 验证成功", "success");
     this.enableUI();
 
     // 验证成功后隐藏 Turnstile 组件
     setTimeout(() => {
       const turnstileContainer = document.getElementById("turnstileContainer");
       if (turnstileContainer) {
-        turnstileContainer.classList.add("hidden");
+        turnstileContainer.classList.add("turnstile-hidden");
       }
     }, 1000); // 延迟1秒后隐藏，让用户看到成功状态
   },
@@ -97,7 +97,7 @@ export const turnstileManager = {
    * 用户会话依赖 Session Token，与 Turnstile Token 无关
    */
   onExpired() {
-    log("ℹ️ Turnstile Token 已过期（Session Token 仍然有效）", "info");
+    log("Turnstile 令牌已过期（会话令牌仍有效）", "info");
     // 不做任何操作 - Session Token 仍然有效
   },
 
@@ -107,7 +107,7 @@ export const turnstileManager = {
    * @deprecated 用户会话全生命周期只需验证一次
    */
   requestRevalidation() {
-    log("⚠️ 不再支持重新验证，请刷新页面", "warning");
+    log("不支持重新验证，请刷新页面", "warning");
     // 不再触发重新验证
   },
 
