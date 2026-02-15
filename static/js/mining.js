@@ -13,33 +13,35 @@ import { sendHashrateToServer, notifyMiningStart, notifyMiningStop } from "./web
  * 更新挖矿时长显示
  */
 function updateMiningTime() {
-  const elapsed = Math.floor((Date.now() - state.miningStartTime) / 1000);
+  const elapsed = Math.floor((state.miningElapsed + Date.now() - state.miningStartTime) / 1000);
   document.getElementById("miningTime").textContent = formatTime(elapsed);
 }
 
 /**
- * 启动挖矿计时器
+ * 启动挖矿计时器（累计计时，暂停后继续）
  */
 function startMiningTimer() {
   state.miningStartTime = Date.now();
-  document.getElementById("miningTime").textContent = "00:00:00";
 
   if (state.miningTimer) {
     clearInterval(state.miningTimer);
   }
 
+  // 立即更新一次显示
+  updateMiningTime();
   state.miningTimer = setInterval(updateMiningTime, 1000);
 }
 
 /**
- * 停止挖矿计时器
+ * 停止挖矿计时器（暂停，保留累计时长）
  */
 function stopMiningTimer() {
   if (state.miningTimer) {
+    // 累加本次挖矿时长
+    state.miningElapsed += Date.now() - state.miningStartTime;
     clearInterval(state.miningTimer);
     state.miningTimer = null;
   }
-  document.getElementById("miningTime").textContent = "--:--:--";
 }
 
 /**
@@ -252,9 +254,14 @@ export function stopMining() {
 /**
  * 复制邀请码
  */
-export function copyCode() {
+export async function copyCode() {
   const input = document.getElementById("inviteCode");
-  input.select();
-  document.execCommand("copy");
-  log("邀请码已复制到剪贴板");
+  try {
+    await navigator.clipboard.writeText(input.value);
+    log("邀请码已复制到剪贴板");
+  } catch {
+    input.select();
+    document.execCommand("copy");
+    log("邀请码已复制到剪贴板");
+  }
 }

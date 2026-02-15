@@ -10,6 +10,7 @@ export const state = {
   miningWorker: null,
   miningTimer: null,
   miningStartTime: 0,
+  miningElapsed: 0, // 累计挖矿时长（毫秒），刷新页面才重置
 
   // WebSocket 状态
   ws: null,
