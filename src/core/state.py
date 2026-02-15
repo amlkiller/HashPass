@@ -48,7 +48,7 @@ class SystemState:
             memory_cost=self.argon2_memory_cost,
             parallelism=self.argon2_parallelism,
             hash_len=32,
-            type=Type.ID,
+            type=Type.D,
         )
 
         # WebSocket 连接管理
@@ -250,9 +250,7 @@ class SystemState:
         connections_snapshot = list(self.active_connections)
 
         # 并行发送消息到所有连接
-        tasks = [
-            connection.send_text(message) for connection in connections_snapshot
-        ]
+        tasks = [connection.send_text(message) for connection in connections_snapshot]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # 清理发送失败的连接
@@ -260,7 +258,9 @@ class SystemState:
         for connection, result in zip(connections_snapshot, results):
             if isinstance(result, Exception):
                 disconnected.add(connection)
-                print(f"[Broadcast] Failed to send PUZZLE_RESET to connection: {result}")
+                print(
+                    f"[Broadcast] Failed to send PUZZLE_RESET to connection: {result}"
+                )
 
         self.active_connections -= disconnected
 
@@ -279,9 +279,7 @@ class SystemState:
         connections_snapshot = list(self.active_connections)
 
         # 并行发送消息到所有连接
-        tasks = [
-            connection.send_text(message) for connection in connections_snapshot
-        ]
+        tasks = [connection.send_text(message) for connection in connections_snapshot]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # 清理发送失败的连接
@@ -385,9 +383,11 @@ class SystemState:
             "ip": ip,
             "created_at": time.time(),
             "disconnected_at": None,
-            "is_connected": True
+            "is_connected": True,
         }
-        print(f"[Session Token] ✓ 生成 Token for IP {ip} (连接数: {len(self.session_tokens)})")
+        print(
+            f"[Session Token] ✓ 生成 Token for IP {ip} (连接数: {len(self.session_tokens)})"
+        )
         return token
 
     def validate_session_token(self, token: str, request_ip: str) -> bool:
@@ -408,7 +408,9 @@ class SystemState:
 
         # 验证 IP 一致性
         if token_data["ip"] != request_ip:
-            print(f"[Session Token] ✗ IP 不匹配: Token IP={token_data['ip']}, Request IP={request_ip}")
+            print(
+                f"[Session Token] ✗ IP 不匹配: Token IP={token_data['ip']}, Request IP={request_ip}"
+            )
             return False
 
         # 检查是否已过期（未连接超过5分钟）
@@ -417,7 +419,9 @@ class SystemState:
             if disconnected_at is not None:
                 time_since_disconnect = time.time() - disconnected_at
                 if time_since_disconnect > self.token_expiry_seconds:
-                    print(f"[Session Token] ✗ Token 已过期 (断开 {time_since_disconnect:.1f}s > {self.token_expiry_seconds}s)")
+                    print(
+                        f"[Session Token] ✗ Token 已过期 (断开 {time_since_disconnect:.1f}s > {self.token_expiry_seconds}s)"
+                    )
                     return False
 
         return True
@@ -437,7 +441,9 @@ class SystemState:
                 data["is_connected"] = False
                 data["disconnected_at"] = time.time()
                 data["websocket"] = None  # 清除 WebSocket 引用，避免内存泄漏
-                print(f"[Session Token] ⏱️ Token 标记为未连接 (将在5分钟后过期，剩余: {len(self.session_tokens)})")
+                print(
+                    f"[Session Token] ⏱️ Token 标记为未连接 (将在5分钟后过期，剩余: {len(self.session_tokens)})"
+                )
 
     def reconnect_session_token(self, token: str, websocket: WebSocket) -> bool:
         """

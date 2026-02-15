@@ -1,6 +1,6 @@
 // worker.js - 挖矿 Worker
 // 注意：这个 Worker 使用 type="module" 来支持 ESM
-import { argon2id } from "https://esm.sh/hash-wasm@4.12.0";
+import { argon2d } from "https://esm.sh/hash-wasm@4.12.0";
 
 let mining = false;
 
@@ -17,7 +17,15 @@ self.onmessage = async function (e) {
   }
 };
 
-async function startMining({ seed, visitorId, traceData, difficulty, memoryCost, timeCost, parallelism }) {
+async function startMining({
+  seed,
+  visitorId,
+  traceData,
+  difficulty,
+  memoryCost,
+  timeCost,
+  parallelism,
+}) {
   let nonce = 0;
   const saltString = seed + visitorId + traceData;
   const salt = new TextEncoder().encode(saltString);
@@ -27,14 +35,14 @@ async function startMining({ seed, visitorId, traceData, difficulty, memoryCost,
 
   self.postMessage({
     type: "LOG",
-    message: `开始计算 Argon2id (内存=${memoryCost/1024}MB, 时间=${timeCost}, 并行=${parallelism})...`,
+    message: `开始计算 Argon2d (内存=${memoryCost / 1024}MB, 时间=${timeCost}, 并行=${parallelism})...`,
   });
 
   while (mining) {
     nonce++;
 
     try {
-      const hash = await argon2id({
+      const hash = await argon2d({
         password: nonce.toString(),
         salt: salt,
         memorySize: memoryCost,

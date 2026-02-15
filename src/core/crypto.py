@@ -1,7 +1,9 @@
-import hmac
-import hashlib
 import base64
+import hashlib
+import hmac
+
 import argon2.low_level as alg
+
 
 def verify_argon2_solution(
     nonce: int,
@@ -12,7 +14,7 @@ def verify_argon2_solution(
     difficulty: int,
     time_cost: int,
     memory_cost: int,
-    parallelism: int
+    parallelism: int,
 ) -> tuple[bool, str | None]:
     """
     验证 Argon2 哈希解（进程安全版本）
@@ -33,18 +35,18 @@ def verify_argon2_solution(
     """
 
     # 重建 Salt（必须与前端一致）
-    salt_raw = (seed + visitor_id + trace_data).encode('utf-8')
+    salt_raw = (seed + visitor_id + trace_data).encode("utf-8")
 
     # 重新计算哈希（使用与配置一致的参数）
     try:
         raw_hash = alg.hash_secret_raw(
-            secret=str(nonce).encode('utf-8'),
+            secret=str(nonce).encode("utf-8"),
             salt=salt_raw,
             time_cost=time_cost,
             memory_cost=memory_cost,
             parallelism=parallelism,
             hash_len=32,
-            type=alg.Type.ID
+            type=alg.Type.D,
         )
         hash_hex = raw_hash.hex()
 
@@ -54,7 +56,10 @@ def verify_argon2_solution(
 
         # 验证难度（前 N 位为 0）
         if not hash_hex.startswith("0" * difficulty):
-            return (False, f"Hash does not meet difficulty requirement ({difficulty} leading zeros)")
+            return (
+                False,
+                f"Hash does not meet difficulty requirement ({difficulty} leading zeros)",
+            )
 
         return (True, None)
 
@@ -63,10 +68,7 @@ def verify_argon2_solution(
 
 
 def generate_invite_code(
-    hmac_secret: bytes,
-    visitor_id: str,
-    nonce: int,
-    seed: str
+    hmac_secret: bytes, visitor_id: str, nonce: int, seed: str
 ) -> str:
     """
     使用 HMAC-SHA256 派生邀请码
@@ -82,18 +84,13 @@ def generate_invite_code(
     """
     # 构建输入数据：将所有唯一标识符组合
     # 这确保每个获胜者的邀请码都是唯一的且可验证的
-    data = f"{visitor_id}:{nonce}:{seed}".encode('utf-8')
+    data = f"{visitor_id}:{nonce}:{seed}".encode("utf-8")
 
     # 使用 HMAC-SHA256 派生
-    hmac_hash = hmac.new(
-        hmac_secret,
-        data,
-        hashlib.sha256
-    ).digest()
+    hmac_hash = hmac.new(hmac_secret, data, hashlib.sha256).digest()
 
     # 转换为 URL-safe base64 编码（移除填充）
     # base64 编码后取前 10 个字符作为邀请码
-    invite_code = base64.urlsafe_b64encode(hmac_hash).decode('ascii').rstrip('=')[:10]
+    invite_code = base64.urlsafe_b64encode(hmac_hash).decode("ascii").rstrip("=")[:10]
 
     return invite_code
-
