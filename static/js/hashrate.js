@@ -12,8 +12,11 @@ import { formatHashRate } from "./utils.js";
 export function updateHashRate(hashRate) {
   const hashRateValue = document.getElementById("hashRateValue");
   const hashRateDisplay = document.getElementById("hashRateDisplay");
+  const hashRateUnit = document.getElementById("hashRateUnit");
 
-  hashRateValue.textContent = hashRate;
+  const formattedRate = formatHashRate(parseFloat(hashRate));
+  hashRateValue.textContent = formattedRate.value;
+  hashRateUnit.textContent = formattedRate.unit;
   hashRateValue.classList.remove("inactive");
   hashRateDisplay.classList.add("active");
 }
@@ -24,8 +27,10 @@ export function updateHashRate(hashRate) {
 export function resetHashRate() {
   const hashRateValue = document.getElementById("hashRateValue");
   const hashRateDisplay = document.getElementById("hashRateDisplay");
+  const hashRateUnit = document.getElementById("hashRateUnit");
 
   hashRateValue.textContent = "--";
+  hashRateUnit.textContent = "H/s";
   hashRateValue.classList.add("inactive");
   hashRateDisplay.classList.remove("active");
 }
@@ -38,12 +43,14 @@ export function resetHashRate() {
 export function updateNetworkHashRate(totalHashrate, activeMiners) {
   const networkHashRateValue = document.getElementById("networkHashRateValue");
   const networkHashRateDisplay = document.getElementById("networkHashRateDisplay");
+  const networkHashRateUnit = document.getElementById("networkHashRateUnit");
   const networkMiners = document.getElementById("networkMiners");
 
   // 格式化算力值（自动单位转换）
   const formattedRate = formatHashRate(totalHashrate);
 
   networkHashRateValue.textContent = formattedRate.value;
+  networkHashRateUnit.textContent = formattedRate.unit;
   networkHashRateValue.classList.remove("inactive");
   networkHashRateDisplay.classList.add("active");
   networkMiners.textContent = `${activeMiners} 人在线`;
@@ -55,9 +62,11 @@ export function updateNetworkHashRate(totalHashrate, activeMiners) {
 export function resetNetworkHashRate() {
   const networkHashRateValue = document.getElementById("networkHashRateValue");
   const networkHashRateDisplay = document.getElementById("networkHashRateDisplay");
+  const networkHashRateUnit = document.getElementById("networkHashRateUnit");
   const networkMiners = document.getElementById("networkMiners");
 
   networkHashRateValue.textContent = "--";
+  networkHashRateUnit.textContent = "H/s";
   networkHashRateValue.classList.add("inactive");
   networkHashRateDisplay.classList.remove("active");
   networkMiners.textContent = "0 人在线";
