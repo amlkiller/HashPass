@@ -165,7 +165,7 @@ export async function startMining() {
     document.getElementById("difficulty").textContent = puzzle.difficulty;
 
     log(`谜题种子: ${puzzle.seed.substring(0, 16)}...`);
-    log(`难度: ${puzzle.difficulty} (${puzzle.difficulty} 个前导零)`);
+    log(`难度: ${puzzle.difficulty} (${puzzle.difficulty} 位前导零比特)`);
     log(`内存: ${puzzle.memory_cost / 1024}MB`);
     log(`Argon2: 时间=${puzzle.time_cost}, 并行度=${puzzle.parallelism}`);
     if (workerCount > 1) {

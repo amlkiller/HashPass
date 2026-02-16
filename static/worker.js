@@ -2,6 +2,22 @@
 // 注意：这个 Worker 使用 type="module" 来支持 ESM
 import { argon2d } from "https://esm.sh/hash-wasm@4.12.0";
 
+function countLeadingZeroBits(hexHash) {
+  let bits = 0;
+  for (const c of hexHash) {
+    const nibble = parseInt(c, 16);
+    if (nibble === 0) {
+      bits += 4;
+    } else {
+      if (nibble < 2) bits += 3;
+      else if (nibble < 4) bits += 2;
+      else if (nibble < 8) bits += 1;
+      break;
+    }
+  }
+  return bits;
+}
+
 let mining = false;
 
 // 接收主线程消息
@@ -87,7 +103,7 @@ async function startMining({
       }
 
       // 检查是否找到解
-      if (hash.startsWith("0".repeat(difficulty))) {
+      if (countLeadingZeroBits(hash) >= difficulty) {
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
         self.postMessage({
           type: "SOLUTION_FOUND",

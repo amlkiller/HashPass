@@ -17,10 +17,10 @@ class SystemState:
         self.lock = asyncio.Lock()
         self.current_seed = secrets.token_hex(16)
 
-        # 从环境变量读取难度配置（带默认值）
-        self.difficulty = int(os.getenv("HASHPASS_DIFFICULTY", "3"))
-        self.min_difficulty = int(os.getenv("HASHPASS_MIN_DIFFICULTY", "1"))
-        self.max_difficulty = int(os.getenv("HASHPASS_MAX_DIFFICULTY", "6"))
+        # 从环境变量读取难度配置（带默认值，单位：前导零比特数）
+        self.difficulty = int(os.getenv("HASHPASS_DIFFICULTY", "12"))
+        self.min_difficulty = int(os.getenv("HASHPASS_MIN_DIFFICULTY", "4"))
+        self.max_difficulty = int(os.getenv("HASHPASS_MAX_DIFFICULTY", "24"))
         self.target_time_min = int(os.getenv("HASHPASS_TARGET_TIME_MIN", "30"))
         self.target_time_max = int(os.getenv("HASHPASS_TARGET_TIME_MAX", "120"))
 

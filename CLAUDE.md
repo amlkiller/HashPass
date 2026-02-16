@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Core Concept
 
-The system maintains a single global puzzle seed in memory. When a user solves the puzzle (finds a hash with N leading zeros), they win the invite code and the seed immediately resets - invalidating all other users' work in progress.
+The system maintains a single global puzzle seed in memory. When a user solves the puzzle (finds a hash with N leading zero bits), they win the invite code and the seed immediately resets - invalidating all other users' work in progress.
 
 ## Commands
 
@@ -106,7 +106,7 @@ src/
 The `SystemState` class maintains:
 - `asyncio.Lock`: Ensures atomic verification (one winner only)
 - `current_seed`: The active puzzle seed (resets on each win)
-- `difficulty`: Number of leading zeros required in hash (dynamically adjusted)
+- `difficulty`: Number of leading zero bits required in hash (dynamically adjusted)
 - `min_difficulty` / `max_difficulty`: Difficulty adjustment bounds
 - `target_time_min` / `target_time_max`: Target solve time range for difficulty adjustment
 - `hmac_secret`: Server-side secret for generating invite codes (regenerates on restart)
@@ -132,7 +132,7 @@ The `SystemState` class maintains:
 2. Fetch Cloudflare Trace data (IP binding)
 3. Get puzzle seed from `/api/puzzle`
 4. Compute: `Hash = Argon2id(nonce, salt=seed+fingerprint+traceData)`
-5. Find nonce where hash starts with N zeros
+5. Find nonce where hash has N leading zero bits
 6. Submit to `/api/verify`
 
 **Server-side (src/api/routes.py)**:
@@ -266,9 +266,9 @@ All configuration parameters can be set via environment variables in `.env` file
 PORT=8000  # Server port (default: 8000)
 
 # ==================== Difficulty Settings ====================
-HASHPASS_DIFFICULTY=3               # Initial difficulty (1-6)
-HASHPASS_MIN_DIFFICULTY=1           # Minimum difficulty
-HASHPASS_MAX_DIFFICULTY=6           # Maximum difficulty
+HASHPASS_DIFFICULTY=12              # Initial difficulty (leading zero bits, default 12)
+HASHPASS_MIN_DIFFICULTY=4           # Minimum difficulty (bits)
+HASHPASS_MAX_DIFFICULTY=24          # Maximum difficulty (bits)
 HASHPASS_TARGET_TIME_MIN=30         # Min target solve time (seconds)
 HASHPASS_TARGET_TIME_MAX=120        # Max target solve time (seconds)
 
@@ -296,13 +296,13 @@ HASHPASS_DISABLE_UVLOOP=false       # Disable uvloop (Linux/macOS)
 
 Difficulty automatically adjusts based on solve times:
 
-Difficulty scaling:
-- Difficulty 1: ~16 attempts average (~1 second)
-- Difficulty 2: ~256 attempts (~15 seconds)
-- Difficulty 3: ~4096 attempts (~1 minute)
-- Difficulty 4: ~65536 attempts (~15 minutes)
-- Difficulty 5: ~1M attempts (~4 hours)
-- Difficulty 6: ~16M attempts (~64 hours)
+Difficulty scaling (bit-level granularity, each +1 bit = 2x harder):
+- Difficulty 4:  ~16 attempts average (~1 second)
+- Difficulty 8:  ~256 attempts (~15 seconds)
+- Difficulty 12: ~4,096 attempts (~1 minute)
+- Difficulty 16: ~65,536 attempts (~15 minutes)
+- Difficulty 20: ~1M attempts (~4 hours)
+- Difficulty 24: ~16M attempts (~64 hours)
 
 **Automatic Adjustment Rules**:
 - Solve time < `HASHPASS_TARGET_TIME_MIN`: Increase difficulty (if not at max)

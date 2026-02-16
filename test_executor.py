@@ -25,7 +25,7 @@ async def test_process_pool():
         "visitor_id": "test_visitor",
         "trace_data": "ip=127.0.0.1",
         "submitted_hash": "0" * 64,
-        "difficulty": 1,
+        "difficulty": 4,
         "time_cost": 3,
         "memory_cost": 65536,
         "parallelism": 1

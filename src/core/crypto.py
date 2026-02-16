@@ -25,7 +25,7 @@ def verify_argon2_solution(
         visitor_id: 设备指纹
         trace_data: Cloudflare Trace 数据
         submitted_hash: 客户端提交的哈希值
-        difficulty: 难度（前导零个数）
+        difficulty: 难度（前导零比特数）
         time_cost: Argon2 时间成本参数
         memory_cost: Argon2 内存成本参数（KB）
         parallelism: Argon2 并行度参数
@@ -54,11 +54,13 @@ def verify_argon2_solution(
         if hash_hex != submitted_hash:
             return (False, "Hash mismatch")
 
-        # 验证难度（前 N 位为 0）
-        if not hash_hex.startswith("0" * difficulty):
+        # 验证难度（前 N 个比特为 0）
+        hash_int = int(hash_hex, 16)
+        leading_zero_bits = 256 - hash_int.bit_length() if hash_int else 256
+        if leading_zero_bits < difficulty:
             return (
                 False,
-                f"Hash does not meet difficulty requirement ({difficulty} leading zeros)",
+                f"Hash does not meet difficulty requirement ({difficulty} leading zero bits, found {leading_zero_bits})",
             )
 
         return (True, None)
