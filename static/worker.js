@@ -25,21 +25,25 @@ async function startMining({
   memoryCost,
   timeCost,
   parallelism,
+  workerId = 0,
+  workerCount = 1,
 }) {
-  let nonce = 0;
+  let nonce = workerId; // 起始 nonce = workerId
   const saltString = seed + visitorId + traceData;
   const salt = new TextEncoder().encode(saltString);
 
   const startTime = Date.now();
   let lastUpdateTime = Date.now();
+  let hashCount = 0; // 实际哈希次数
 
   self.postMessage({
     type: "LOG",
-    message: `开始计算 Argon2d (内存=${memoryCost / 1024}MB, 时间=${timeCost}, 并行=${parallelism})...`,
+    workerId,
+    message: `[Worker ${workerId}] 开始计算 Argon2d (内存=${memoryCost / 1024}MB, 时间=${timeCost}, 并行=${parallelism})...`,
   });
 
   while (mining) {
-    nonce++;
+    hashCount++;
 
     try {
       const hash = await argon2d({
@@ -56,14 +60,15 @@ async function startMining({
       const timeSinceLastUpdate = (currentTime - lastUpdateTime) / 1000;
 
       // 每2秒更新一次速率和进度
-      if (timeSinceLastUpdate >= 2.0 || nonce % 10 === 0) {
+      if (timeSinceLastUpdate >= 2.0 || hashCount % 10 === 0) {
         const elapsed = (currentTime - startTime) / 1000;
-        const hashRate = elapsed > 0 ? (nonce / elapsed).toFixed(2) : "0.00";
+        const hashRate = elapsed > 0 ? (hashCount / elapsed).toFixed(2) : "0.00";
 
         // 发送进度日志（每10次）
-        if (nonce % 10 === 0) {
+        if (hashCount % 10 === 0) {
           self.postMessage({
             type: "PROGRESS",
+            workerId,
             nonce: nonce,
             hash: hash.substring(0, 16),
             elapsed: elapsed.toFixed(1),
@@ -74,6 +79,7 @@ async function startMining({
         if (timeSinceLastUpdate >= 2.0) {
           self.postMessage({
             type: "HASH_RATE",
+            workerId,
             hashRate: hashRate,
           });
           lastUpdateTime = currentTime;
@@ -85,6 +91,7 @@ async function startMining({
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
         self.postMessage({
           type: "SOLUTION_FOUND",
+          workerId,
           nonce: nonce,
           hash: hash,
           elapsed: elapsed,
@@ -95,10 +102,14 @@ async function startMining({
     } catch (error) {
       self.postMessage({
         type: "ERROR",
+        workerId,
         message: error.message,
       });
       mining = false;
       return;
     }
+
+    // stride: 步长为 workerCount
+    nonce += workerCount;
   }
 }

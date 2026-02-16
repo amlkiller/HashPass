@@ -43,6 +43,9 @@ class SystemState:
         self.argon2_memory_cost = int(os.getenv("HASHPASS_ARGON2_MEMORY_COST", "65536"))
         self.argon2_parallelism = int(os.getenv("HASHPASS_ARGON2_PARALLELISM", "1"))
 
+        # 前端并行 Worker 数量
+        self.worker_count = int(os.getenv("HASHPASS_WORKER_COUNT", "1"))
+
         self.ph = PasswordHasher(
             time_cost=self.argon2_time_cost,
             memory_cost=self.argon2_memory_cost,

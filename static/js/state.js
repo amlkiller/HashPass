@@ -7,7 +7,8 @@ export const state = {
   // 挖矿状态
   mining: false,
   visitorId: "",
-  miningWorker: null,
+  miningWorkers: [],       // Worker 数组（多 Worker 并行）
+  workerHashrates: {},     // 各 Worker 算力 { workerId: rate }
   miningTimer: null,
   miningStartTime: 0,
   miningElapsed: 0, // 累计挖矿时长（毫秒），刷新页面才重置

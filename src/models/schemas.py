@@ -6,6 +6,7 @@ class PuzzleResponse(BaseModel):
     memory_cost: int
     time_cost: int
     parallelism: int
+    worker_count: int
 
 class Submission(BaseModel):
     visitorId: str      # ThumbmarkJS 指纹

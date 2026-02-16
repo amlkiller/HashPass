@@ -136,6 +136,7 @@ async def get_puzzle(
         memory_cost=state.ph.memory_cost,
         time_cost=state.ph.time_cost,
         parallelism=state.ph.parallelism,
+        worker_count=state.worker_count,
     )
 
 
