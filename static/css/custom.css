@@ -1,95 +1,230 @@
-/* HashPass - Custom Styles (Tailwind CDN cannot implement) */
+/* HashPass — Clean Minimal Pro */
+/* Ultra-refined dark-first UI with glass morphism, indigo accents, elegant typography */
 
-/* ==================== Theme Variables ==================== */
+/* ==================== 1. CSS Variables / Theme System ==================== */
 
 /* Dark Theme (Default) */
 :root,
 [data-theme="dark"] {
-    --bg-primary: #000000;
-    --bg-secondary: #111111;
-    --bg-tertiary: #1a1a1a;
-    --bg-hover: #222222;
-    --border-color: #333333;
-    --border-hover: #444444;
-    --text-primary: #ffffff;
-    --text-secondary: #888888;
-    --text-tertiary: #666666;
-    --accent: #ffffff;
-    --accent-hover: #e0e0e0;
-    --success: #0070f3;
-    --success-bg: rgba(0, 112, 243, 0.1);
-    --error: #ff0080;
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+    --bg-primary:     #09090b;
+    --bg-secondary:   #18181b;
+    --bg-tertiary:    #27272a;
+    --bg-hover:       #3f3f46;
+    --bg-elevated:    #18181b;
+
+    --border-color:   rgba(255, 255, 255, 0.08);
+    --border-hover:   rgba(255, 255, 255, 0.15);
+    --border-accent:  rgba(99, 102, 241, 0.4);
+
+    --text-primary:   #fafafa;
+    --text-secondary: #a1a1aa;
+    --text-tertiary:  #71717a;
+
+    --accent:         #818cf8;
+    --accent-hover:   #6366f1;
+    --accent-subtle:  rgba(99, 102, 241, 0.12);
+
+    --success:        #34d399;
+    --success-bg:     rgba(52, 211, 153, 0.1);
+    --error:          #f87171;
+    --error-bg:       rgba(248, 113, 113, 0.1);
+    --warning:        #fbbf24;
+    --warning-bg:     rgba(251, 191, 36, 0.1);
+
+    --shadow-sm:      0 1px 2px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.15);
+    --shadow-md:      0 4px 6px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2);
+    --shadow-lg:      0 10px 25px rgba(0,0,0,0.4), 0 4px 10px rgba(0,0,0,0.3);
+
+    --glass-bg:       rgba(24, 24, 27, 0.7);
+    --glass-border:   rgba(255, 255, 255, 0.06);
+
+    --dot-color:      rgba(255, 255, 255, 0.035);
+    --orb-opacity:    0.15;
 }
 
 /* Light Theme */
 [data-theme="light"] {
-    --bg-primary: #ffffff;
-    --bg-secondary: #fafafa;
-    --bg-tertiary: #f5f5f5;
-    --bg-hover: #f0f0f0;
-    --border-color: #e5e5e5;
-    --border-hover: #d0d0d0;
-    --text-primary: #000000;
-    --text-secondary: #666666;
-    --text-tertiary: #999999;
-    --accent: #000000;
-    --accent-hover: #333333;
-    --success: #0070f3;
-    --success-bg: rgba(0, 112, 243, 0.08);
-    --error: #ff0080;
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
-    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.16);
+    --bg-primary:     #fafafa;
+    --bg-secondary:   #ffffff;
+    --bg-tertiary:    #f4f4f5;
+    --bg-hover:       #e4e4e7;
+    --bg-elevated:    rgba(255,255,255,0.8);
+
+    --border-color:   rgba(0, 0, 0, 0.08);
+    --border-hover:   rgba(0, 0, 0, 0.15);
+    --border-accent:  rgba(99, 102, 241, 0.3);
+
+    --text-primary:   #18181b;
+    --text-secondary: #52525b;
+    --text-tertiary:  #a1a1aa;
+
+    --accent:         #6366f1;
+    --accent-hover:   #4f46e5;
+    --accent-subtle:  rgba(99, 102, 241, 0.08);
+
+    --success:        #10b981;
+    --success-bg:     rgba(16, 185, 129, 0.08);
+    --error:          #ef4444;
+    --error-bg:       rgba(239, 68, 68, 0.06);
+    --warning:        #f59e0b;
+    --warning-bg:     rgba(245, 158, 11, 0.06);
+
+    --shadow-sm:      0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md:      0 4px 6px rgba(0,0,0,0.07);
+    --shadow-lg:      0 10px 25px rgba(0,0,0,0.1);
+
+    --glass-bg:       rgba(255, 255, 255, 0.7);
+    --glass-border:   rgba(0, 0, 0, 0.06);
+
+    --dot-color:      rgba(0, 0, 0, 0.04);
+    --orb-opacity:    0.08;
 }
 
-/* ==================== Keyframe Animations ==================== */
+/* ==================== 2. Base / Reset ==================== */
 
-/* Pulse Animation (Generic) */
-@keyframes pulse {
+html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+::selection {
+    background: var(--accent);
+    color: #fff;
+}
+
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+button {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* ==================== 3. Background Effects ==================== */
+
+/* Dot grid pattern */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(var(--dot-color) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Gradient orb — decorative depth */
+body::after {
+    content: "";
+    position: fixed;
+    top: -20%;
+    right: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, rgba(139, 92, 246, 0.2) 40%, transparent 70%);
+    opacity: var(--orb-opacity);
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+    animation: gradientShift 20s ease-in-out infinite alternate;
+}
+
+/* Ensure body children sit above the background */
+body > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* ==================== 4. Glass Morphism ==================== */
+
+.glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+}
+
+/* ==================== 5. Keyframe Animations ==================== */
+
+/* Fade up — staggered page load entrance */
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Subtle pulse — gentle glow for active states */
+@keyframes subtlePulse {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    50% { opacity: 0.6; }
 }
 
-/* Pulse Dot Animation (Status Indicator) */
+/* Shimmer — refined shimmer for active hash rate */
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* Log slide in — smoother log entry animation */
+@keyframes logSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Gradient shift — slow gradient movement on orb */
+@keyframes gradientShift {
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+    100% {
+        transform: translate(-40px, 30px) scale(1.1);
+    }
+}
+
+/* Pulse dot — status indicator */
 @keyframes pulse-dot {
     0%, 100% {
         opacity: 1;
         transform: scale(1);
     }
     50% {
-        opacity: 0.7;
-        transform: scale(1.1);
+        opacity: 0.6;
+        transform: scale(1.15);
     }
 }
 
-/* Pulse Glow Animation (Hash Rate) */
+/* Pulse glow — hash rate glow */
 @keyframes pulse-glow {
     0%, 100% {
         text-shadow:
-            0 0 30px rgba(0, 112, 243, 0.5),
-            0 0 60px rgba(0, 112, 243, 0.2);
+            0 0 20px rgba(129, 140, 248, 0.4),
+            0 0 40px rgba(129, 140, 248, 0.15);
     }
     50% {
         text-shadow:
-            0 0 40px rgba(0, 112, 243, 0.7),
-            0 0 80px rgba(0, 112, 243, 0.3);
+            0 0 30px rgba(129, 140, 248, 0.6),
+            0 0 60px rgba(129, 140, 248, 0.25);
     }
 }
 
-/* Shimmer Animation (Hash Rate Active) */
-@keyframes shimmer {
-    0% { left: -100%; }
-    100% { left: 100%; }
-}
-
-/* Slide In Animation (Result Card) */
+/* Slide in — result card */
 @keyframes slideIn {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(16px);
     }
     to {
         opacity: 1;
@@ -97,24 +232,18 @@
     }
 }
 
-/* Log Fade In Animation */
-@keyframes logFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Button Spin Animation (Loading State) */
+/* Button spin — loading state */
 @keyframes button-spin {
     to { transform: rotate(360deg); }
 }
 
-/* ==================== Animation Utility Classes ==================== */
+/* Status dot glow pulse */
+@keyframes dotGlow {
+    0%, 100% { box-shadow: 0 0 4px currentColor; }
+    50% { box-shadow: 0 0 10px currentColor, 0 0 20px currentColor; }
+}
+
+/* ==================== 6. Animation Utility Classes ==================== */
 
 .animate-pulse-dot {
     animation: pulse-dot 2s infinite;
@@ -137,14 +266,18 @@
 }
 
 .animate-log-fade-in {
-    animation: logFadeIn 0.3s ease-out forwards;
+    animation: logSlideIn 0.25s ease-out forwards;
 }
 
 .animate-button-spin {
     animation: button-spin 0.6s linear infinite;
 }
 
-/* ==================== Progress Bar Styles ==================== */
+.animate-fade-up {
+    animation: fadeUp 0.5s ease-out both;
+}
+
+/* ==================== 7. Progress Bar ==================== */
 
 progress {
     -webkit-appearance: none;
@@ -154,35 +287,33 @@ progress {
 
 progress::-webkit-progress-bar {
     background: var(--bg-tertiary);
-    border-radius: 3px;
+    border-radius: 4px;
 }
 
 progress::-webkit-progress-value {
-    background: linear-gradient(90deg, var(--success) 0%, var(--accent) 100%);
-    border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--success) 100%);
+    border-radius: 4px;
     transition: width 0.3s ease;
 }
 
 progress::-moz-progress-bar {
-    background: linear-gradient(90deg, var(--success) 0%, var(--accent) 100%);
-    border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--success) 100%);
+    border-radius: 4px;
 }
 
-/* ==================== Scrollbar Styles ==================== */
+/* ==================== 8. Scrollbar ==================== */
 
 .log-box::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .log-box::-webkit-scrollbar-track {
-    background: var(--bg-secondary);
-    border-radius: 4px;
+    background: transparent;
 }
 
 .log-box::-webkit-scrollbar-thumb {
     background: var(--border-color);
-    border-radius: 4px;
-    border: 2px solid var(--bg-secondary);
+    border-radius: 3px;
     transition: background 0.2s ease;
 }
 
@@ -190,34 +321,38 @@ progress::-moz-progress-bar {
     background: var(--text-tertiary);
 }
 
-/* Firefox Scrollbar */
+/* Firefox */
 .log-box {
     scrollbar-width: thin;
-    scrollbar-color: var(--border-color) var(--bg-secondary);
+    scrollbar-color: var(--border-color) transparent;
 }
 
-/* ==================== WebSocket Status Badge (Data Attributes) ==================== */
+/* ==================== 9. WebSocket Status Badge ==================== */
 
 .status-badge[data-status="connected"] .status-dot {
-    background: #10b981;
-    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+    animation: pulse-dot 2s infinite;
 }
 
 .status-badge[data-status="connected"] .status-text {
-    color: #10b981;
+    color: var(--success);
 }
 
 .status-badge[data-status="connecting"] .status-dot {
-    background: #f59e0b;
-    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+    background: var(--warning);
+    box-shadow: 0 0 6px var(--warning);
+    animation: pulse-dot 1s infinite;
 }
 
 .status-badge[data-status="connecting"] .status-text {
-    color: #f59e0b;
+    color: var(--warning);
 }
 
 .status-badge[data-status="disconnected"] .status-dot {
-    background: #6b7280;
+    background: var(--text-tertiary);
+    box-shadow: none;
+    animation: none;
 }
 
 .status-badge[data-status="disconnected"] .status-text {
@@ -225,17 +360,18 @@ progress::-moz-progress-bar {
 }
 
 .status-badge[data-status="error"] .status-dot {
-    background: #ef4444;
-    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+    background: var(--error);
+    box-shadow: 0 0 8px var(--error);
+    animation: dotGlow 1.5s ease-in-out infinite;
 }
 
 .status-badge[data-status="error"] .status-text {
-    color: #ef4444;
+    color: var(--error);
 }
 
-/* ==================== Hash Rate Display States ==================== */
+/* ==================== 10. Hash Rate Display ==================== */
 
-/* Shimmer line pseudo-element */
+/* Shimmer line */
 .hash-rate-display::before {
     content: "";
     position: absolute;
@@ -243,59 +379,106 @@ progress::-moz-progress-bar {
     left: -100%;
     width: 100%;
     height: 2px;
-    background: linear-gradient(90deg, transparent, var(--success), transparent);
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
     transition: left 0.6s ease;
 }
 
 .hash-rate-display.active::before {
-    left: 100%;
     animation: shimmer 3s infinite;
 }
 
-/* Local Hash Rate (Green) */
+/* Local Hash Rate */
 .hash-rate-display.local .hash-rate-value:not(.inactive) {
-    color: #10b981;
-    text-shadow:
-        0 0 30px rgba(16, 185, 129, 0.5),
-        0 0 60px rgba(16, 185, 129, 0.2);
-}
-
-/* Network Hash Rate (Blue) */
-.hash-rate-display.network .hash-rate-value:not(.inactive) {
     color: var(--success);
     text-shadow:
-        0 0 30px rgba(0, 112, 243, 0.5),
-        0 0 60px rgba(0, 112, 243, 0.2);
+        0 0 20px rgba(52, 211, 153, 0.4),
+        0 0 40px rgba(52, 211, 153, 0.15);
+}
+
+/* Network Hash Rate */
+.hash-rate-display.network .hash-rate-value:not(.inactive) {
+    color: var(--accent);
+    text-shadow:
+        0 0 20px rgba(129, 140, 248, 0.4),
+        0 0 40px rgba(129, 140, 248, 0.15);
     animation: pulse-glow 2s ease-in-out infinite;
 }
 
-/* Inactive State */
+/* Inactive */
 .hash-rate-value.inactive {
     color: var(--text-tertiary) !important;
     text-shadow: none !important;
     animation: none !important;
 }
 
-/* Active Background States */
+/* Active background */
 .hash-rate-display.active {
     background: linear-gradient(
         135deg,
-        rgba(0, 112, 243, 0.18) 0%,
-        rgba(0, 112, 243, 0.08) 50%,
-        rgba(0, 112, 243, 0.12) 100%
+        rgba(99, 102, 241, 0.12) 0%,
+        rgba(99, 102, 241, 0.04) 50%,
+        rgba(99, 102, 241, 0.08) 100%
     ) !important;
 }
 
 .hash-rate-display.local.active {
     background: linear-gradient(
         135deg,
-        rgba(16, 185, 129, 0.15) 0%,
-        rgba(16, 185, 129, 0.05) 100%
+        rgba(52, 211, 153, 0.1) 0%,
+        rgba(52, 211, 153, 0.03) 100%
     ) !important;
 }
 
-/* ==================== Button Ripple Effect ==================== */
+/* ==================== 11. Header Gradient Text ==================== */
 
+.gradient-text {
+    background: linear-gradient(135deg, var(--accent) 0%, #a78bfa 50%, var(--text-primary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ==================== 12. Theme Switcher ==================== */
+
+.theme-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    background: transparent;
+    border: none;
+    border-radius: 0.5rem;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+@media (min-width: 640px) {
+    .theme-btn {
+        width: 2.25rem;
+        height: 2.25rem;
+    }
+}
+
+.theme-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.theme-btn.active {
+    background: var(--accent-subtle);
+    color: var(--accent);
+    box-shadow: var(--shadow-sm);
+}
+
+.theme-btn.active:hover {
+    background: var(--accent-subtle);
+}
+
+/* ==================== 13. Buttons ==================== */
+
+/* Button ripple */
 .btn-ripple::before {
     content: "";
     position: absolute;
@@ -310,12 +493,11 @@ progress::-moz-progress-bar {
 }
 
 .btn-ripple:active::before {
-    width: 300px;
-    height: 300px;
+    width: 200%;
+    padding-bottom: 200%;
 }
 
-/* ==================== Button Loading State ==================== */
-
+/* Button loading state */
 .btn-loading {
     position: relative;
     color: transparent !important;
@@ -337,32 +519,15 @@ progress::-moz-progress-bar {
     animation: button-spin 0.6s linear infinite;
 }
 
-/* ==================== Result Card Title Icon ==================== */
+/* ==================== 14. Result Card ==================== */
 
 .result-title::before {
     content: "\1F389";
-    font-size: 1.5rem;
-    margin-right: 0.5rem;
-}
-
-/* ==================== Log Header Icon ==================== */
-
-.log-header-title::before {
-    content: "\1F4CB";
     font-size: 1.25rem;
     margin-right: 0.5rem;
 }
 
-/* ==================== Header Gradient Text ==================== */
-
-.gradient-text {
-    background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-/* ==================== Log Header Accent Bar ==================== */
+/* ==================== 15. Log Header ==================== */
 
 .log-header-bar::before {
     content: "";
@@ -371,11 +536,143 @@ progress::-moz-progress-bar {
     top: 0;
     bottom: 0;
     width: 3px;
-    background: linear-gradient(180deg, var(--success) 0%, transparent 100%);
+    background: linear-gradient(180deg, var(--accent) 0%, transparent 100%);
     border-radius: 0 2px 2px 0;
 }
 
-/* ==================== Right Panel Gradient Fade ==================== */
+/* ==================== 16. Log Entry Styles ==================== */
+
+.log-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.25rem;
+    border-radius: 0.5rem;
+    border-left: 2px solid;
+    background: transparent;
+    animation: logSlideIn 0.25s ease-out forwards;
+    transition: all 0.15s ease;
+}
+
+@media (min-width: 640px) {
+    .log-entry {
+        gap: 0.75rem;
+        padding: 0.625rem 1rem;
+        margin-bottom: 0.375rem;
+    }
+}
+
+.log-entry.log-info {
+    border-left-color: var(--accent);
+}
+
+.log-entry.log-success {
+    border-left-color: var(--success);
+    background: var(--success-bg);
+}
+
+.log-entry.log-error {
+    border-left-color: var(--error);
+    background: var(--error-bg);
+}
+
+.log-entry.log-warning {
+    border-left-color: var(--warning);
+    background: var(--warning-bg);
+}
+
+/* Log icon */
+.log-icon {
+    flex-shrink: 0;
+    width: 1.125rem;
+    height: 1.125rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-top: 0.0625rem;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+@media (min-width: 640px) {
+    .log-icon {
+        width: 1.25rem;
+        height: 1.25rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* Log content */
+.log-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.log-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.625rem;
+    color: var(--text-tertiary);
+    margin-bottom: 0.125rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+
+@media (min-width: 640px) {
+    .log-time {
+        font-size: 0.6875rem;
+        margin-bottom: 0.1875rem;
+    }
+}
+
+.log-message {
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    overflow-wrap: break-word;
+}
+
+@media (min-width: 640px) {
+    .log-message {
+        font-size: 0.8125rem;
+    }
+}
+
+.log-message.log-msg-success {
+    color: var(--success);
+    font-weight: 500;
+}
+
+.log-message.log-msg-error {
+    color: var(--error);
+    font-weight: 500;
+}
+
+.log-message.log-msg-warning {
+    color: var(--warning);
+}
+
+/* Log highlight */
+.log-highlight {
+    color: var(--text-primary);
+    font-weight: 600;
+    background: var(--bg-tertiary);
+    padding: 0.0625rem 0.3125rem;
+    border-radius: 0.25rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    border: 1px solid var(--border-color);
+}
+
+@media (min-width: 640px) {
+    .log-highlight {
+        padding: 0.0625rem 0.375rem;
+        font-size: 0.75rem;
+    }
+}
+
+/* ==================== 17. Right Panel Fade ==================== */
 
 .right-panel-fade::before {
     content: "";
@@ -391,7 +688,20 @@ progress::-moz-progress-bar {
     z-index: 1;
 }
 
-/* ==================== Turnstile Container Hidden State ==================== */
+/* ==================== 18. Turnstile Container ==================== */
+
+.turnstile-widget {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 65px;
+    width: 100%;
+    overflow: hidden;
+}
+
+.turnstile-widget > * {
+    transform-origin: center center;
+}
 
 .turnstile-hidden {
     opacity: 0;
@@ -401,19 +711,49 @@ progress::-moz-progress-bar {
     gap: 0;
     border: none !important;
     overflow: hidden;
+    pointer-events: none;
+    display: none;
     transition: opacity 0.3s ease, max-height 0.3s ease, padding 0.3s ease, margin 0.3s ease;
 }
 
-/* ==================== Accessibility ==================== */
+/* ==================== 19. Status Item Hover ==================== */
 
-/* Focus Styles */
+@media (hover: hover) {
+    .status-item-hover:hover {
+        background: var(--bg-hover);
+        border-color: var(--border-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .log-entry:hover {
+        background: var(--bg-tertiary);
+        transform: translateX(2px);
+    }
+
+    .log-entry.log-success:hover {
+        background: var(--success-bg);
+    }
+
+    .log-entry.log-error:hover {
+        background: var(--error-bg);
+    }
+
+    .log-entry.log-warning:hover {
+        background: var(--warning-bg);
+    }
+}
+
+/* ==================== 20. Accessibility ==================== */
+
+/* Focus styles */
 button:focus-visible,
 input:focus-visible {
-    outline: 2px solid var(--success);
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
 }
 
-/* Reduced Motion */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -423,23 +763,27 @@ input:focus-visible {
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
     }
+
+    body::after {
+        animation: none !important;
+    }
 }
 
-/* High Contrast Mode */
+/* High contrast */
 @media (prefers-contrast: high) {
     :root,
     [data-theme="dark"] {
-        --border-color: #555555;
-        --text-secondary: #aaaaaa;
+        --border-color: rgba(255, 255, 255, 0.2);
+        --text-secondary: #c4c4cc;
     }
 
     [data-theme="light"] {
-        --border-color: #cccccc;
-        --text-secondary: #555555;
+        --border-color: rgba(0, 0, 0, 0.2);
+        --text-secondary: #3f3f46;
     }
 }
 
-/* Screen Reader Only */
+/* Screen reader only */
 .sr-only {
     position: absolute;
     width: 1px;
@@ -452,23 +796,17 @@ input:focus-visible {
     border-width: 0;
 }
 
-/* ==================== Touch Interactions ==================== */
-
-* {
-    -webkit-tap-highlight-color: transparent;
-}
-
-button {
-    -webkit-user-select: none;
-    user-select: none;
-}
-
-/* ==================== Print Styles ==================== */
+/* ==================== 21. Print ==================== */
 
 @media print {
     body {
         background: white !important;
         color: black !important;
+    }
+
+    body::before,
+    body::after {
+        display: none !important;
     }
 
     .theme-switcher,
@@ -487,4 +825,18 @@ button {
     .log-entry {
         page-break-inside: avoid;
     }
+}
+
+/* ==================== 22. Staggered Entrance ==================== */
+
+.left-panel > *:nth-child(1) { animation: fadeUp 0.4s ease-out 0.05s both; }
+.left-panel > *:nth-child(2) { animation: fadeUp 0.4s ease-out 0.1s both; }
+.left-panel > *:nth-child(3) { animation: fadeUp 0.4s ease-out 0.15s both; }
+.left-panel > *:nth-child(4) { animation: fadeUp 0.4s ease-out 0.2s both; }
+.left-panel > *:nth-child(5) { animation: fadeUp 0.4s ease-out 0.25s both; }
+.left-panel > *:nth-child(6) { animation: fadeUp 0.4s ease-out 0.3s both; }
+.left-panel > *:nth-child(7) { animation: fadeUp 0.4s ease-out 0.35s both; }
+
+.right-panel {
+    animation: fadeUp 0.5s ease-out 0.15s both;
 }

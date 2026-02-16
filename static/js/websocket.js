@@ -205,6 +205,14 @@ export function connectWebSocket(isReconnect = false) {
     stopWsPing();
     resetNetworkHashRate();
 
+    // 断开连接时停止挖矿（避免 Worker 继续消耗资源，提交结果也会因 session 失效而失败）
+    if (state.mining) {
+      import("./mining.js").then(({ stopMining }) => {
+        stopMining();
+        log("WebSocket 断开，挖矿已自动停止", "warning");
+      });
+    }
+
     // 检查是否是 Token 验证失败（1008 = Policy Violation）
     if (event.code === 1008) {
       log("会话已过期，请刷新页面", "error");

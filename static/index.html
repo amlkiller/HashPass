@@ -4,12 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
     <meta name="description" content="HashPass - 原子哈希锁协议。临时谜题，内存证明，赢者通吃。">
-    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
     <title>HashPass - 原子哈希锁协议</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -17,42 +21,50 @@
             theme: {
                 extend: {
                     fontFamily: {
-                        mono: ['SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', 'Consolas', 'Courier New', 'monospace'],
+                        sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'SF Mono', 'Monaco', 'Cascadia Code', 'Consolas', 'monospace'],
                     }
                 }
             }
         }
     </script>
-    <!-- Custom CSS (animations, theme variables, browser-specific styles) -->
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="/static/css/custom.css">
     <!-- Cloudflare Turnstile Script -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body class="font-sans bg-[var(--bg-primary)] text-[var(--text-primary)] leading-relaxed min-h-screen flex items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 transition-colors duration-300">
-    <div class="container grid grid-cols-1 lg:grid-cols-[minmax(280px,420px)_1fr] gap-3 sm:gap-4 lg:gap-8 max-w-[1600px] w-full lg:h-[85vh] lg:min-h-[650px]">
+    <div class="container grid grid-cols-1 lg:grid-cols-[minmax(280px,420px)_1fr] gap-3 sm:gap-4 lg:gap-6 max-w-[1600px] w-full lg:h-[85vh] lg:min-h-[650px]">
         <!-- Left Panel: Control Panel -->
-        <div class="left-panel bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl p-4 sm:p-5 lg:p-8 flex flex-col gap-4 lg:gap-6 shadow-[var(--shadow-md)] transition-all duration-300 hover:shadow-[var(--shadow-lg)] overflow-visible">
+        <div class="left-panel glass bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl p-4 sm:p-5 lg:p-7 flex flex-col gap-4 lg:gap-5 shadow-[var(--shadow-md)] transition-all duration-300 hover:shadow-[var(--shadow-lg)] overflow-visible">
             <!-- Header -->
-            <header class="header">
-                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 tracking-tight gradient-text">HashPass</h1>
-                <p class="subtitle text-xs sm:text-sm text-[var(--text-secondary)] font-normal">原子哈希锁协议</p>
+            <header class="header flex flex-col gap-1">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-[var(--accent-subtle)] border border-[var(--border-accent)] flex items-center justify-center">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight gradient-text">HashPass</h1>
+                </div>
+                <p class="subtitle text-xs sm:text-sm text-[var(--text-tertiary)] font-medium mt-1 tracking-wide">Atomic Hash Lock Protocol</p>
             </header>
 
             <!-- Theme Switcher -->
-            <section class="theme-switcher flex gap-2 p-1 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg w-fit">
-                <button class="theme-btn flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-transparent border-none rounded-md text-[var(--text-secondary)] cursor-pointer transition-all duration-200 hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]" data-theme="light" title="浅色模式">
+            <section class="theme-switcher flex gap-1.5 p-1 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-xl w-fit">
+                <button class="theme-btn" data-theme="light" title="浅色模式">
                     <svg width="14" height="14" class="sm:w-4 sm:h-4" viewBox="0 0 16 16" fill="none">
                         <circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/>
                         <path d="M8 1V3M8 13V15M15 8H13M3 8H1M12.5 3.5L11 5M5 11L3.5 12.5M12.5 12.5L11 11M5 5L3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                     </svg>
                 </button>
-                <button class="theme-btn flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-transparent border-none rounded-md text-[var(--text-secondary)] cursor-pointer transition-all duration-200 hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]" data-theme="system" title="跟随系统">
+                <button class="theme-btn" data-theme="system" title="跟随系统">
                     <svg width="14" height="14" class="sm:w-4 sm:h-4" viewBox="0 0 16 16" fill="none">
                         <rect x="2" y="3" width="12" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/>
                         <path d="M2 9H14" stroke="currentColor" stroke-width="1.5"/>
                     </svg>
                 </button>
-                <button class="theme-btn active flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-[var(--bg-primary)] border-none rounded-md text-[var(--text-primary)] cursor-pointer transition-all duration-200 shadow-[var(--shadow-sm)]" data-theme="dark" title="深色模式">
+                <button class="theme-btn active" data-theme="dark" title="深色模式">
                     <svg width="14" height="14" class="sm:w-4 sm:h-4" viewBox="0 0 16 16" fill="none">
                         <path d="M14 8.5C13.5 11.5 10.5 14 7 14C3.5 14 1 11.5 1 8C1 4.5 3.5 2 7 2C7.5 2 8 2.1 8.5 2.2C7 3.5 6 5.5 6 8C6 10.5 7.5 13 10 14C11.5 13.5 13 12 14 10.5V8.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
                     </svg>
@@ -60,80 +72,83 @@
             </section>
 
             <!-- Intro -->
-            <section class="intro p-3 sm:p-4 bg-[var(--bg-tertiary)] border-l-[3px] border-l-[var(--accent)] rounded-md transition-all duration-200 hover:border-l-[var(--success)] hover:translate-x-0.5">
-                <p class="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">临时谜题，内存证明，赢者通吃。</p>
+            <section class="intro p-3 sm:p-3.5 bg-[var(--accent-subtle)] border border-[var(--border-accent)] rounded-xl transition-all duration-200">
+                <p class="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed font-medium">临时谜题，内存证明，赢者通吃。</p>
             </section>
 
             <!-- Status Section -->
-            <section class="status flex flex-col gap-2 sm:gap-3">
+            <section class="status flex flex-col gap-2">
                 <!-- Turnstile CAPTCHA -->
-                <div class="status-item turnstile-container flex flex-col gap-3 p-3 sm:p-4 items-stretch bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg transition-all duration-300 overflow-hidden" id="turnstileContainer">
-                    <span class="label text-xs sm:text-sm text-[var(--text-secondary)] font-medium">人机验证</span>
-                    <div id="turnstileWidget" class="turnstile-widget flex justify-center items-center min-h-[65px] w-full overflow-visible scale-75 sm:scale-85 md:scale-90 lg:scale-100 origin-center"></div>
+                <div class="status-item turnstile-container flex flex-col gap-3 p-3 sm:p-4 items-stretch bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-xl transition-all duration-300 overflow-hidden" id="turnstileContainer">
+                    <span class="label text-xs text-[var(--text-tertiary)] font-semibold uppercase tracking-wider">人机验证</span>
+                    <div id="turnstileWidget" class="turnstile-widget"></div>
                 </div>
 
-                <div class="status-item flex justify-between items-center p-2.5 sm:p-3.5 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg transition-all duration-200 min-h-[44px] sm:min-h-[48px] hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] hover:-translate-y-px hover:shadow-[var(--shadow-sm)]">
-                    <span class="label text-xs sm:text-sm text-[var(--text-secondary)] font-medium flex-shrink-0 mr-4">状态</span>
+                <div class="status-item status-item-hover flex justify-between items-center p-2.5 sm:p-3 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-xl transition-all duration-200 min-h-[42px] sm:min-h-[46px]">
+                    <span class="label text-xs text-[var(--text-tertiary)] font-semibold uppercase tracking-wider flex-shrink-0 mr-4">状态</span>
                     <span class="value text-xs sm:text-sm text-[var(--text-primary)] font-semibold text-right overflow-hidden text-ellipsis" id="statusText">准备中...</span>
                 </div>
-                <div class="status-item flex justify-between items-center p-2.5 sm:p-3.5 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg transition-all duration-200 min-h-[44px] sm:min-h-[48px] hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] hover:-translate-y-px hover:shadow-[var(--shadow-sm)]">
-                    <span class="label text-xs sm:text-sm text-[var(--text-secondary)] font-medium flex-shrink-0 mr-4">连接状态</span>
+                <div class="status-item status-item-hover flex justify-between items-center p-2.5 sm:p-3 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-xl transition-all duration-200 min-h-[42px] sm:min-h-[46px]">
+                    <span class="label text-xs text-[var(--text-tertiary)] font-semibold uppercase tracking-wider flex-shrink-0 mr-4">连接</span>
                     <span class="value status-badge flex items-center gap-2" id="wsStatus" data-status="disconnected">
                         <span class="status-dot w-2 h-2 rounded-full transition-all duration-300"></span>
-                        <span class="status-text text-xs sm:text-[0.8125rem]">未连接</span>
+                        <span class="status-text text-xs sm:text-sm font-medium">未连接</span>
                     </span>
                 </div>
-                <div class="status-item flex justify-between items-center p-2.5 sm:p-3.5 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg transition-all duration-200 min-h-[44px] sm:min-h-[48px] hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] hover:-translate-y-px hover:shadow-[var(--shadow-sm)]">
-                    <span class="label text-xs sm:text-sm text-[var(--text-secondary)] font-medium flex-shrink-0 mr-4">设备 ID</span>
-                    <span class="value mono font-mono text-[0.625rem] sm:text-xs bg-[var(--bg-primary)] px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md border border-[var(--border-color)] max-w-[140px] sm:max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap" id="fingerprint">计算中...</span>
+                <div class="status-item status-item-hover flex justify-between items-center p-2.5 sm:p-3 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-xl transition-all duration-200 min-h-[42px] sm:min-h-[46px]">
+                    <span class="label text-xs text-[var(--text-tertiary)] font-semibold uppercase tracking-wider flex-shrink-0 mr-4">设备 ID</span>
+                    <span class="value mono font-mono text-[10px] sm:text-xs bg-[var(--bg-primary)] px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border border-[var(--border-color)] max-w-[140px] sm:max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap text-[var(--text-secondary)]" id="fingerprint">计算中...</span>
                 </div>
-                <div class="status-item flex justify-between items-center p-2.5 sm:p-3.5 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg transition-all duration-200 min-h-[44px] sm:min-h-[48px] hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] hover:-translate-y-px hover:shadow-[var(--shadow-sm)]">
-                    <span class="label text-xs sm:text-sm text-[var(--text-secondary)] font-medium flex-shrink-0 mr-4">难度</span>
-                    <span class="value text-xs sm:text-sm text-[var(--text-primary)] font-semibold text-right overflow-hidden text-ellipsis" id="difficulty">-</span>
+                <div class="status-item status-item-hover flex justify-between items-center p-2.5 sm:p-3 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-xl transition-all duration-200 min-h-[42px] sm:min-h-[46px]">
+                    <span class="label text-xs text-[var(--text-tertiary)] font-semibold uppercase tracking-wider flex-shrink-0 mr-4">难度</span>
+                    <span class="value text-xs sm:text-sm text-[var(--text-primary)] font-bold font-mono text-right overflow-hidden text-ellipsis" id="difficulty">-</span>
                 </div>
-                <div class="status-item flex justify-between items-center p-2.5 sm:p-3.5 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg transition-all duration-200 min-h-[44px] sm:min-h-[48px] hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] hover:-translate-y-px hover:shadow-[var(--shadow-sm)]">
-                    <span class="label text-xs sm:text-sm text-[var(--text-secondary)] font-medium flex-shrink-0 mr-4">挖矿时长</span>
-                    <span class="value mono font-mono text-[0.625rem] sm:text-xs bg-[var(--bg-primary)] px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md border border-[var(--border-color)]" id="miningTime">--:--:--</span>
+                <div class="status-item status-item-hover flex justify-between items-center p-2.5 sm:p-3 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-xl transition-all duration-200 min-h-[42px] sm:min-h-[46px]">
+                    <span class="label text-xs text-[var(--text-tertiary)] font-semibold uppercase tracking-wider flex-shrink-0 mr-4">挖矿时长</span>
+                    <span class="value mono font-mono text-[10px] sm:text-xs bg-[var(--bg-primary)] px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border border-[var(--border-color)] text-[var(--text-secondary)]" id="miningTime">--:--:--</span>
                 </div>
-                <progress id="progress" class="hidden w-full h-1.5 border-none bg-[var(--bg-tertiary)] rounded-sm overflow-hidden mt-2"></progress>
+                <progress id="progress" class="hidden w-full h-1 border-none bg-[var(--bg-tertiary)] rounded-full overflow-hidden mt-1"></progress>
             </section>
 
             <!-- Control Buttons -->
             <section class="controls flex flex-col sm:flex-row gap-2 sm:gap-3">
-                <button id="startBtn" class="btn btn-primary btn-ripple flex-1 py-3 sm:py-3.5 px-4 sm:px-6 text-sm font-semibold border rounded-lg cursor-pointer transition-all duration-200 min-h-[44px] relative overflow-hidden bg-[var(--accent)] text-[var(--bg-primary)] border-[var(--accent)] shadow-[var(--shadow-sm)] hover:bg-[var(--accent-hover)] hover:border-[var(--accent-hover)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none" onclick="startMining()">开始挖矿</button>
-                <button id="stopBtn" class="btn btn-secondary btn-ripple flex-1 py-3 sm:py-3.5 px-4 sm:px-6 text-sm font-semibold border rounded-lg cursor-pointer transition-all duration-200 min-h-[44px] relative overflow-hidden bg-transparent text-[var(--text-primary)] border-[var(--border-color)] hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-sm)] disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none" onclick="stopMining()" disabled>停止</button>
+                <button id="startBtn" class="btn btn-primary btn-ripple flex-1 py-3 sm:py-3.5 px-4 sm:px-6 text-sm font-bold border rounded-xl cursor-pointer transition-all duration-200 min-h-[44px] relative overflow-hidden bg-[var(--accent)] text-white border-[var(--accent)] shadow-[var(--shadow-sm)] hover:bg-[var(--accent-hover)] hover:border-[var(--accent-hover)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none" onclick="startMining()">开始挖矿</button>
+                <button id="stopBtn" class="btn btn-secondary btn-ripple flex-1 py-3 sm:py-3.5 px-4 sm:px-6 text-sm font-bold border rounded-xl cursor-pointer transition-all duration-200 min-h-[44px] relative overflow-hidden bg-transparent text-[var(--text-secondary)] border-[var(--border-color)] hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] hover:text-[var(--text-primary)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-sm)] disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none" onclick="stopMining()" disabled>停止</button>
             </section>
 
             <!-- Invite Code Result -->
-            <section id="result" class="result hidden p-4 sm:p-6 bg-[var(--success-bg)] border-2 border-[var(--success)] rounded-xl mt-auto animate-slide-in">
-                <h3 class="result-title text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-[var(--success)] flex items-center gap-2">恭喜获胜！</h3>
-                <div class="invite-code-wrapper flex flex-col sm:flex-row gap-2 sm:gap-2">
-                    <input type="text" id="inviteCode" class="invite-input flex-1 py-3 sm:py-3.5 px-3 sm:px-4 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg text-[var(--text-primary)] font-mono text-xs sm:text-sm font-semibold transition-all duration-200 focus:outline-none focus:border-[var(--success)] focus:shadow-[0_0_0_3px_var(--success-bg)]" readonly>
-                    <button class="btn-copy py-3 sm:py-3.5 px-4 sm:px-6 bg-[var(--success)] text-white border border-[var(--success)] rounded-lg text-xs sm:text-sm font-semibold cursor-pointer transition-all duration-200 whitespace-nowrap hover:bg-[#0051cc] hover:border-[#0051cc] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] active:translate-y-0" onclick="copyCode()">复制</button>
+            <section id="result" class="result hidden p-4 sm:p-5 glass bg-[var(--glass-bg)] border border-[var(--success)] rounded-2xl mt-auto animate-slide-in shadow-[0_0_30px_rgba(52,211,153,0.1)]">
+                <h3 class="result-title text-base sm:text-lg font-bold mb-3 sm:mb-4 text-[var(--success)] flex items-center gap-2">恭喜获胜！</h3>
+                <div class="invite-code-wrapper flex flex-col sm:flex-row gap-2">
+                    <input type="text" id="inviteCode" class="invite-input flex-1 py-3 sm:py-3.5 px-3 sm:px-4 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl text-[var(--text-primary)] font-mono text-xs sm:text-sm font-semibold transition-all duration-200 focus:outline-none focus:border-[var(--success)] focus:shadow-[0_0_0_3px_var(--success-bg)]" readonly>
+                    <button class="btn-copy py-3 sm:py-3.5 px-4 sm:px-6 bg-[var(--success)] text-white border border-[var(--success)] rounded-xl text-xs sm:text-sm font-bold cursor-pointer transition-all duration-200 whitespace-nowrap hover:opacity-90 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] active:translate-y-0" onclick="copyCode()">复制</button>
                 </div>
             </section>
         </div>
 
         <!-- Right Panel: Logs -->
-        <div class="right-panel right-panel-fade bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl flex flex-col overflow-hidden shadow-[var(--shadow-md)] transition-all duration-300 hover:shadow-[var(--shadow-lg)] relative min-h-[400px] sm:min-h-[500px] lg:min-h-0 max-h-[60vh] sm:max-h-[65vh] lg:max-h-none">
-            <div class="log-header log-header-bar relative py-4 sm:py-5 px-5 sm:px-8 border-b border-[var(--border-color)] bg-gradient-to-br from-[var(--bg-tertiary)] to-[var(--bg-secondary)] transition-all duration-300">
-                <h4 class="log-header-title text-base sm:text-lg font-bold text-[var(--text-primary)] tracking-tight flex items-center gap-2">日志</h4>
+        <div class="right-panel right-panel-fade glass bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl flex flex-col overflow-hidden shadow-[var(--shadow-md)] transition-all duration-300 hover:shadow-[var(--shadow-lg)] relative min-h-0 max-h-[60vh] lg:max-h-none lg:flex-1">
+            <div class="log-header log-header-bar relative py-4 sm:py-5 px-5 sm:px-7 border-b border-[var(--border-color)] bg-[var(--bg-tertiary)] transition-all duration-300">
+                <h4 class="log-header-title text-sm sm:text-base font-bold text-[var(--text-primary)] tracking-tight flex items-center gap-2 uppercase">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[var(--accent)] inline-block"></span>
+                    日志
+                </h4>
             </div>
             <!-- Hash Rate Display -->
             <div class="hash-rate-container grid grid-cols-1 sm:grid-cols-2 gap-0 border-b border-[var(--border-color)]">
                 <!-- Local Hash Rate -->
-                <div class="hash-rate-display local flex flex-col items-center justify-center gap-1 sm:gap-2 py-4 sm:py-5 px-3 sm:px-4 bg-gradient-to-br from-[var(--bg-tertiary)] to-[var(--bg-hover)] transition-all duration-400 relative overflow-hidden border-b sm:border-b-0 sm:border-r border-[var(--border-color)]" id="hashRateDisplay">
-                    <div class="hash-rate-label text-[0.625rem] sm:text-xs text-[var(--text-secondary)] font-semibold uppercase tracking-wider opacity-80">本地算力</div>
-                    <div class="hash-rate-value inactive font-mono text-2xl sm:text-3xl lg:text-[2.5rem] font-extrabold text-[var(--text-tertiary)] tracking-tight min-w-[80px] sm:min-w-[100px] text-center transition-all duration-400 leading-none" id="hashRateValue">--</div>
-                    <div class="hash-rate-unit text-xs sm:text-sm text-[var(--text-secondary)] font-bold uppercase tracking-wide opacity-90" id="hashRateUnit">H/s</div>
+                <div class="hash-rate-display local flex flex-col items-center justify-center gap-1 sm:gap-1.5 py-5 sm:py-6 px-3 sm:px-4 bg-[var(--bg-tertiary)] transition-all duration-[400ms] relative overflow-hidden border-b sm:border-b-0 sm:border-r border-[var(--border-color)]" id="hashRateDisplay">
+                    <div class="hash-rate-label text-[10px] sm:text-xs text-[var(--text-tertiary)] font-semibold uppercase tracking-[0.1em]">本地算力</div>
+                    <div class="hash-rate-value inactive font-mono text-2xl sm:text-3xl lg:text-[2.5rem] font-extrabold text-[var(--text-tertiary)] tracking-tight min-w-[80px] sm:min-w-[100px] text-center transition-all duration-[400ms] leading-none" id="hashRateValue">--</div>
+                    <div class="hash-rate-unit text-[10px] sm:text-xs text-[var(--text-tertiary)] font-bold uppercase tracking-[0.15em]" id="hashRateUnit">H/s</div>
                 </div>
 
                 <!-- Network Hash Rate -->
-                <div class="hash-rate-display network flex flex-col items-center justify-center gap-1 sm:gap-2 py-4 sm:py-5 px-3 sm:px-4 bg-gradient-to-br from-[var(--bg-tertiary)] to-[var(--bg-hover)] transition-all duration-400 relative overflow-hidden" id="networkHashRateDisplay">
-                    <div class="hash-rate-label text-[0.625rem] sm:text-xs text-[var(--text-secondary)] font-semibold uppercase tracking-wider opacity-80">全网算力</div>
-                    <div class="hash-rate-value inactive font-mono text-2xl sm:text-3xl lg:text-[2.5rem] font-extrabold text-[var(--text-tertiary)] tracking-tight min-w-[80px] sm:min-w-[100px] text-center transition-all duration-400 leading-none" id="networkHashRateValue">--</div>
-                    <div class="hash-rate-unit text-xs sm:text-sm text-[var(--text-secondary)] font-bold uppercase tracking-wide opacity-90" id="networkHashRateUnit">H/s</div>
-                    <div class="hash-rate-miners text-[0.625rem] sm:text-[0.7rem] text-[var(--text-secondary)] font-semibold tracking-wide -mt-1" id="networkMiners">0 人在线</div>
+                <div class="hash-rate-display network flex flex-col items-center justify-center gap-1 sm:gap-1.5 py-5 sm:py-6 px-3 sm:px-4 bg-[var(--bg-tertiary)] transition-all duration-[400ms] relative overflow-hidden" id="networkHashRateDisplay">
+                    <div class="hash-rate-label text-[10px] sm:text-xs text-[var(--text-tertiary)] font-semibold uppercase tracking-[0.1em]">全网算力</div>
+                    <div class="hash-rate-value inactive font-mono text-2xl sm:text-3xl lg:text-[2.5rem] font-extrabold text-[var(--text-tertiary)] tracking-tight min-w-[80px] sm:min-w-[100px] text-center transition-all duration-[400ms] leading-none" id="networkHashRateValue">--</div>
+                    <div class="hash-rate-unit text-[10px] sm:text-xs text-[var(--text-tertiary)] font-bold uppercase tracking-[0.15em]" id="networkHashRateUnit">H/s</div>
+                    <div class="hash-rate-miners text-[10px] text-[var(--text-tertiary)] font-medium tracking-wide" id="networkMiners">0 人在线</div>
                 </div>
             </div>
             <div id="logBox" class="log-box flex-1 p-3 sm:p-4 overflow-y-auto overflow-x-hidden transition-all duration-300 scroll-smooth"></div>
