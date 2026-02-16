@@ -48,7 +48,9 @@ async function startMining({
   const saltString = seed + visitorId + traceData;
   const salt = new TextEncoder().encode(saltString);
 
-  const startTime = Date.now();
+  const WINDOW_SIZE = 10; // 滑动窗口大小（保留最近 N 次哈希的时间戳）
+  const hashTimestamps = []; // 滑动窗口时间戳队列
+  const startTime = Date.now(); // 用于计算总耗时
   let lastUpdateTime = Date.now();
   let hashCount = 0; // 实际哈希次数
 
@@ -75,19 +77,32 @@ async function startMining({
       const currentTime = Date.now();
       const timeSinceLastUpdate = (currentTime - lastUpdateTime) / 1000;
 
+      // 记录到滑动窗口
+      hashTimestamps.push(currentTime);
+      if (hashTimestamps.length > WINDOW_SIZE) {
+        hashTimestamps.shift();
+      }
+
       // 每2秒更新一次速率和进度
       if (timeSinceLastUpdate >= 2.0 || hashCount % 10 === 0) {
-        const elapsed = (currentTime - startTime) / 1000;
-        const hashRate = elapsed > 0 ? (hashCount / elapsed).toFixed(2) : "0.00";
+        // 滑动窗口速率：窗口内哈希数 / 窗口时间跨度
+        let hashRate = "0.00";
+        if (hashTimestamps.length >= 2) {
+          const windowSpan = (hashTimestamps[hashTimestamps.length - 1] - hashTimestamps[0]) / 1000;
+          if (windowSpan > 0) {
+            hashRate = ((hashTimestamps.length - 1) / windowSpan).toFixed(2);
+          }
+        }
 
         // 发送进度日志（每10次）
         if (hashCount % 10 === 0) {
+          const elapsed = ((currentTime - startTime) / 1000).toFixed(1);
           self.postMessage({
             type: "PROGRESS",
             workerId,
             nonce: nonce,
             hash: hash.substring(0, 16),
-            elapsed: elapsed.toFixed(1),
+            elapsed: elapsed,
           });
         }
 

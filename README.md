@@ -242,11 +242,21 @@ sequenceDiagram
 
 **4. Hardware Fingerprinting**: ThumbmarkJS ties solutions to physical devices (Canvas/Audio/WebGL fingerprints).
 
-**5. Dynamic Difficulty**: System automatically adjusts difficulty based on solve times:
-- Too fast (<30s) → Increase difficulty
-- Too slow (>120s) → Decrease difficulty
+**5. Dynamic Difficulty (Proportional Step)**: System automatically adjusts difficulty using a log2-proportional algorithm:
+- Adjustment step = `floor(log2(deviation_ratio))`, clamped to 1~4 bits
+- The further solve time deviates from the target midpoint, the larger the step
 - Only counts time when miners are actively mining
-- Timeout auto-resets puzzle if unsolved after max target time
+- Timeout auto-resets puzzle with aggressive step (minimum -2 bits)
+
+| Solve Time | Deviation | Step |
+|------------|-----------|------|
+| 1s | 75x fast | +4 bits |
+| 5s | 15x fast | +3 bits |
+| 10s | 7.5x fast | +2 bits |
+| 25s | 3x fast | +1 bit |
+| 30-120s | In range | 0 (no change) |
+| 300s | 4x slow | -2 bits |
+| 1000s | 13x slow | -3 bits |
 
 **6. Network Hashrate Monitoring**: Real-time global mining statistics:
 - Clients report hashrate via WebSocket
@@ -614,10 +624,15 @@ Yes, but you lose IP binding. The system falls back to `request.client.host` whi
 
 ### How does dynamic difficulty work?
 
-The system tracks solve times and automatically adjusts:
-- Solved in <30s → Increase difficulty (harder puzzle next round)
-- No solution after 120s → Decrease difficulty + reset puzzle
-- Target window: 30-120 seconds per puzzle
+The system uses a **proportional step algorithm** based on `log2` deviation from the target midpoint (75s by default):
+
+- Solved much faster than target → large increase (up to +4 bits per round)
+- Solved slightly faster → small increase (+1 bit)
+- Solved within target window (30-120s) → no change
+- Solved slightly slower → small decrease (-1 bit)
+- Timeout (no solution after 120s) → aggressive decrease (at least -2 bits) + reset puzzle
+
+This allows rapid convergence: e.g., from difficulty 4 to 24 in just 5 rounds (vs. 20 rounds with fixed +1 step).
 
 Configure thresholds in `.env`:
 ```bash
