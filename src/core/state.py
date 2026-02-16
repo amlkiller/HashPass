@@ -1,5 +1,6 @@
 import asyncio
 import json
+import math
 import os
 import secrets
 import time
@@ -142,9 +143,43 @@ class SystemState:
             # 当前暂停中，返回累计时间
             return self.total_mining_time
 
+    def _calculate_difficulty_step(self, solve_time: float) -> int:
+        """
+        根据解题时间与目标中位时间的偏离比例，计算难度调整步数。
+
+        使用 log2(target_midpoint / solve_time) 将时间偏离直接映射为 bit 数变化：
+        - 解题时间是目标的 1/2 → +1 bit
+        - 解题时间是目标的 1/4 → +2 bit
+        - 解题时间是目标的 1/8 → +3 bit
+        - 解题时间是目标的 2x  → -1 bit
+        - 解题时间是目标的 4x  → -2 bit
+
+        Returns:
+            正数表示应增加难度，负数表示应降低难度，0 表示不调整
+        """
+        target_midpoint = (self.target_time_min + self.target_time_max) / 2
+
+        if solve_time < self.target_time_min:
+            # 解题太快 → 正向调整（增加难度）
+            # solve_time 越小，ratio 越大，step 越大
+            ratio = target_midpoint / max(solve_time, 0.1)  # 防止除零
+            step = math.floor(math.log2(ratio))
+            return max(1, min(step, 4))  # clamp 到 [1, 4]
+
+        elif solve_time > self.target_time_max:
+            # 解题太慢 → 负向调整（降低难度）
+            ratio = solve_time / target_midpoint
+            step = math.floor(math.log2(ratio))
+            return -max(1, min(step, 4))  # clamp 到 [-4, -1]
+
+        else:
+            return 0  # 在目标区间内，不调整
+
     def adjust_difficulty(self, solve_time: float) -> tuple[int, int, str]:
         """
-        根据解题时间调整难度
+        根据解题时间调整难度（比例步进算法）
+
+        偏离目标时间越大，调整步数越大（±1~4 bit），实现快速收敛。
 
         Args:
             solve_time: 解题耗时（秒）
@@ -153,27 +188,33 @@ class SystemState:
             (old_difficulty, new_difficulty, reason)
         """
         old_difficulty = self.difficulty
+        step = self._calculate_difficulty_step(solve_time)
 
-        if solve_time < self.target_time_min:
-            # 解题太快，增加难度
-            if self.difficulty < self.max_difficulty:
-                self.difficulty += 1
+        if step > 0:
+            # 增加难度
+            new_diff = min(self.difficulty + step, self.max_difficulty)
+            actual_step = new_diff - self.difficulty
+            if actual_step > 0:
+                self.difficulty = new_diff
                 reason = (
-                    f"Solved too fast ({solve_time:.1f}s < {self.target_time_min}s)"
+                    f"Solved too fast ({solve_time:.1f}s < {self.target_time_min}s), "
+                    f"+{actual_step} bit(s)"
                 )
             else:
                 reason = f"Already at max difficulty ({self.max_difficulty})"
-        elif solve_time > self.target_time_max:
-            # 解题太慢，降低难度
-            if self.difficulty > self.min_difficulty:
-                self.difficulty -= 1
+        elif step < 0:
+            # 降低难度
+            new_diff = max(self.difficulty + step, self.min_difficulty)
+            actual_step = self.difficulty - new_diff
+            if actual_step > 0:
+                self.difficulty = new_diff
                 reason = (
-                    f"Solved too slow ({solve_time:.1f}s > {self.target_time_max}s)"
+                    f"Solved too slow ({solve_time:.1f}s > {self.target_time_max}s), "
+                    f"-{actual_step} bit(s)"
                 )
             else:
                 reason = f"Already at min difficulty ({self.min_difficulty})"
         else:
-            # 在目标时间内，难度不变
             reason = f"Perfect timing ({solve_time:.1f}s within {self.target_time_min}-{self.target_time_max}s)"
 
         self.last_solve_time = solve_time
@@ -210,10 +251,16 @@ class SystemState:
                         if mining_time >= self.target_time_max:
                             old_difficulty = self.difficulty
 
-                            # 降低难度
-                            if self.difficulty > self.min_difficulty:
-                                self.difficulty -= 1
-                                reason = f"Timeout (mining time: {mining_time:.1f}s > {self.target_time_max}s) - auto reducing difficulty"
+                            # 使用比例步进降低难度（超时场景最少降2 bit，更积极地收敛）
+                            step = self._calculate_difficulty_step(mining_time)
+                            # step 应该是负数（超时意味着太慢），但超时比普通慢更严重
+                            timeout_step = min(step, -2)  # 至少降 2 bit
+                            new_diff = max(self.difficulty + timeout_step, self.min_difficulty)
+                            actual_step = self.difficulty - new_diff
+
+                            if actual_step > 0:
+                                self.difficulty = new_diff
+                                reason = f"Timeout (mining time: {mining_time:.1f}s > {self.target_time_max}s) - auto reducing by {actual_step} bit(s)"
                             else:
                                 reason = f"Timeout (mining time: {mining_time:.1f}s) but already at min difficulty"
 
