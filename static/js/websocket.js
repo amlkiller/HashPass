@@ -182,6 +182,12 @@ export function connectWebSocket(isReconnect = false) {
     startWsPing();
     // 立即发送一次 ping 获取在线人数
     state.ws.send("ping");
+
+    // 重连成功后，如果挖矿仍在进行，重新通知服务器
+    if (isReconnect && state.mining) {
+      log("重连成功，恢复挖矿状态");
+      notifyMiningStart();
+    }
   };
 
   state.ws.onmessage = (event) => {
@@ -205,14 +211,6 @@ export function connectWebSocket(isReconnect = false) {
     stopWsPing();
     resetNetworkHashRate();
 
-    // 断开连接时停止挖矿（避免 Worker 继续消耗资源，提交结果也会因 session 失效而失败）
-    if (state.mining) {
-      import("./mining.js").then(({ stopMining }) => {
-        stopMining();
-        log("WebSocket 断开，挖矿已自动停止", "warning");
-      });
-    }
-
     // 检查是否是 Token 验证失败（1008 = Policy Violation）
     if (event.code === 1008) {
       log("会话已过期，请刷新页面", "error");
@@ -223,11 +221,23 @@ export function connectWebSocket(isReconnect = false) {
         statusText.textContent = "会话过期，请刷新页面";
       }
 
-      // 禁用挖矿功能
+      // 会话过期，立即停止挖矿并禁用UI
+      if (state.mining) {
+        import("./mining.js").then(({ stopMining }) => {
+          stopMining();
+          log("会话过期，挖矿已自动停止", "warning");
+        });
+      }
+
       document.getElementById("startBtn").disabled = true;
       document.getElementById("stopBtn").disabled = true;
 
       return; // 不再尝试自动重连
+    }
+
+    // 非致命断开：尝试重连，挖矿继续（Worker 不依赖 WebSocket）
+    if (state.mining) {
+      log("WebSocket 断开，正在尝试重连（挖矿继续）...", "warning");
     }
 
     // 自动重连（使用指数退避策略）
@@ -249,7 +259,14 @@ function attemptReconnect() {
       statusText.textContent = "会话过期，请刷新页面";
     }
 
-    // 禁用挖矿功能
+    // 无令牌，停止挖矿并禁用UI
+    if (state.mining) {
+      import("./mining.js").then(({ stopMining }) => {
+        stopMining();
+        log("无有效令牌，挖矿已自动停止", "warning");
+      });
+    }
+
     document.getElementById("startBtn").disabled = true;
     document.getElementById("stopBtn").disabled = true;
 
@@ -272,7 +289,14 @@ function attemptReconnect() {
       statusText.textContent = "连接失败，请刷新页面";
     }
 
-    // 禁用挖矿功能
+    // 重连全部失败，停止挖矿并禁用UI
+    if (state.mining) {
+      import("./mining.js").then(({ stopMining }) => {
+        stopMining();
+        log("重连失败，挖矿已自动停止", "warning");
+      });
+    }
+
     document.getElementById("startBtn").disabled = true;
     document.getElementById("stopBtn").disabled = true;
 

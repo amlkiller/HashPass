@@ -15,6 +15,7 @@ from src.core.turnstile import (
     verify_turnstile_token,
 )
 from src.core.webhook import send_webhook_notification
+from src.core.useragent import validate_user_agent
 from src.models.schemas import PuzzleResponse, Submission, VerifyResponse
 
 router = APIRouter(prefix="/api")
@@ -292,6 +293,14 @@ async def websocket_endpoint(websocket: WebSocket):
     1. 首次连接：使用 Turnstile Token (query param: token)
     2. 重连：使用 Session Token (query param: token)
     """
+    # 0. User-Agent 检查（BaseHTTPMiddleware 不拦截 WebSocket）
+    ua = websocket.headers.get("user-agent")
+    is_valid_ua, ua_reason = validate_user_agent(ua)
+    if not is_valid_ua:
+        print(f"[UA Block] WebSocket rejected: {ua_reason} | ua={ua!r}")
+        await websocket.close(code=1008, reason=ua_reason)
+        return
+
     # 1. 从 Query Parameter 获取 Token
     token = websocket.query_params.get("token")
 
