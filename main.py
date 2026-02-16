@@ -67,7 +67,7 @@ class UserAgentMiddleware(BaseHTTPMiddleware):
                 print(f"[UA Block] {reason} | path={path} ua={ua!r}")
                 return JSONResponse(
                     status_code=404,
-                    content={"error"},
+                    content={"error": "Not found"},
                 )
         return await call_next(request)
 
