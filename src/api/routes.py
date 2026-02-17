@@ -344,15 +344,35 @@ async def websocket_endpoint(websocket: WebSocket):
         # Session Token 验证成功，重连场景
         logger.info("WebSocket reconnecting with Session Token from IP %s", real_ip)
 
+        # 重连豁免：踢掉旧的同 IP 连接
+        old_ws = state.get_ip_connection(real_ip)
+        if old_ws is not None:
+            try:
+                state.active_connections.discard(old_ws)
+                await state.remove_client_hashrate(old_ws)
+                state.stop_miner(old_ws)
+                state.unregister_ip_connection(real_ip, old_ws)
+                await old_ws.close(code=1008, reason="Replaced by new connection")
+            except Exception:
+                pass
+            logger.info("Kicked old connection for IP %s (Session Token reconnect)", real_ip)
+
         # 接受连接
         await websocket.accept()
         state.active_connections.add(websocket)
+        state.register_ip_connection(real_ip, websocket)
 
         # 重新激活 Token（更新 WebSocket 引用和连接状态）
         state.reconnect_session_token(token, websocket)
         logger.info("WebSocket reconnected successfully using existing Session Token")
 
     else:
+        # 首次连接：不允许同 IP 多开
+        if state.has_active_connection(real_ip):
+            logger.warning("WebSocket rejected: duplicate IP %s", real_ip)
+            await websocket.close(code=1008, reason="Duplicate connection from same IP")
+            return
+
         # 尝试验证 Turnstile Token（首次连接场景）
         is_valid, error_message = await verify_turnstile_token(token, real_ip)
 
@@ -368,6 +388,7 @@ async def websocket_endpoint(websocket: WebSocket):
         # 接受连接
         await websocket.accept()
         state.active_connections.add(websocket)
+        state.register_ip_connection(real_ip, websocket)
 
         # 生成并下发 Session Token（仅在首次连接时生成新的）
         session_token = state.generate_session_token(websocket, real_ip)
@@ -430,6 +451,7 @@ async def websocket_endpoint(websocket: WebSocket):
         await state.remove_client_hashrate(websocket)
         state.stop_miner(websocket)  # 停止挖矿计时
         state.revoke_session_token(websocket)  # 清理 Session Token
+        state.unregister_ip_connection(real_ip, websocket)  # 移除 IP 连接映射
         logger.info("WebSocket connection cleaned up for %s", real_ip)
 
 

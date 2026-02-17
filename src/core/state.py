@@ -97,6 +97,9 @@ class SystemState:
         # IP 黑名单（内存态，重启清空）
         self.banned_ips: Set[str] = set()
 
+        # IP -> WebSocket 映射，追踪每个 IP 的活跃连接（限制同 IP 多开）
+        self.ip_connections: Dict[str, WebSocket] = {}
+
     def reset_puzzle(self):
         """重置谜题（获胜后调用）"""
         self.current_seed = secrets.token_hex(16)
@@ -735,6 +738,23 @@ class SystemState:
     def get_banned_ips(self) -> list[str]:
         """返回黑名单中所有 IP"""
         return sorted(self.banned_ips)
+
+    def has_active_connection(self, ip: str) -> bool:
+        """检查该 IP 是否已有活跃 WebSocket 连接"""
+        return ip in self.ip_connections
+
+    def register_ip_connection(self, ip: str, ws: WebSocket) -> None:
+        """注册 IP 与 WebSocket 的映射"""
+        self.ip_connections[ip] = ws
+
+    def unregister_ip_connection(self, ip: str, ws: WebSocket) -> None:
+        """取消注册（仅当当前映射的 ws 匹配时才移除，防止误删）"""
+        if self.ip_connections.get(ip) is ws:
+            del self.ip_connections[ip]
+
+    def get_ip_connection(self, ip: str) -> Optional[WebSocket]:
+        """获取该 IP 当前的活跃 WebSocket"""
+        return self.ip_connections.get(ip)
 
     async def broadcast_to_admins(self, message: dict):
         """广播消息给所有 Admin WebSocket 连接"""

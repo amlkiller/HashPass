@@ -330,6 +330,7 @@ async def kick_all(_: str = Depends(require_admin)):
     state.active_connections.clear()
     state.active_miners.clear()
     state.client_hashrates.clear()
+    state.ip_connections.clear()
 
     logger.info("Kicked all miners (%d connections, %d sessions revoked)", count, revoked)
     return {"message": f"Kicked {count} connections, revoked {revoked} sessions"}
