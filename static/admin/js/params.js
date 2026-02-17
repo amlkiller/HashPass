@@ -46,9 +46,9 @@ window.applyDifficulty = async function () {
     if (!isNaN(max)) data.max_difficulty = max;
     const res = await api.updateDifficulty(data);
     if (res.error) { showToast(res.error, "error"); return; }
-    showToast(`Difficulty: ${res.difficulty} (${res.min_difficulty}-${res.max_difficulty})`, "success");
+    showToast(`难度: ${res.difficulty} (${res.min_difficulty}-${res.max_difficulty})`, "success");
     loadCurrentParams();
-  } catch (e) { showToast("Failed: " + e.message, "error"); }
+  } catch (e) { showToast("失败: " + e.message, "error"); }
 };
 
 window.applyTargetTime = async function () {
@@ -60,8 +60,8 @@ window.applyTargetTime = async function () {
     if (!isNaN(max)) data.target_time_max = max;
     const res = await api.updateTargetTime(data);
     if (res.error) { showToast(res.error, "error"); return; }
-    showToast(`Target time: ${res.target_time_min}-${res.target_time_max}s`, "success");
-  } catch (e) { showToast("Failed: " + e.message, "error"); }
+    showToast(`目标时间: ${res.target_time_min}-${res.target_time_max}秒`, "success");
+  } catch (e) { showToast("失败: " + e.message, "error"); }
 };
 
 window.applyArgon2 = async function () {
@@ -76,7 +76,7 @@ window.applyArgon2 = async function () {
     const res = await api.updateArgon2(data);
     if (res.error) { showToast(res.error, "error"); return; }
     showToast(`Argon2: t=${res.time_cost} m=${res.memory_cost}KB p=${res.parallelism}`, "success");
-  } catch (e) { showToast("Failed: " + e.message, "error"); }
+  } catch (e) { showToast("失败: " + e.message, "error"); }
 };
 
 window.applyWorkerCount = async function () {
@@ -85,6 +85,6 @@ window.applyWorkerCount = async function () {
     if (isNaN(wc)) return;
     const res = await api.updateWorkerCount({ worker_count: wc });
     if (res.error) { showToast(res.error, "error"); return; }
-    showToast(`Worker count: ${res.worker_count}`, "success");
-  } catch (e) { showToast("Failed: " + e.message, "error"); }
+    showToast(`Worker 数量: ${res.worker_count}`, "success");
+  } catch (e) { showToast("失败: " + e.message, "error"); }
 };

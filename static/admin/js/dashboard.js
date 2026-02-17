@@ -36,7 +36,7 @@ export function renderDashboardUpdate(data) {
   setText("info-seed", (data.current_seed || "").slice(0, 16) + "...");
   setText("info-mining-time", formatTime(data.mining_time || 0));
   setText("info-last-solve", data.last_solve_time != null ? `${data.last_solve_time.toFixed(1)}s` : "--");
-  setText("info-mining-status", data.is_mining_active ? "Mining" : "Idle");
+  setText("info-mining-status", data.is_mining_active ? "挖矿中" : "空闲");
 
   const statusEl = document.getElementById("info-mining-status");
   if (statusEl) {
@@ -51,7 +51,7 @@ async function refreshMiners() {
     if (!tbody) return;
 
     if (miners.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">No active miners</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">暂无活跃矿工</td></tr>`;
       return;
     }
 
@@ -59,8 +59,8 @@ async function refreshMiners() {
       <tr>
         <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;">${escapeHtml(m.ip)}</td>
         <td style="font-family:'JetBrains Mono',monospace;">${m.hashrate.toFixed(2)} H/s</td>
-        <td>${m.last_seen.toFixed(0)}s ago</td>
-        <td style="text-align:center;"><button class="admin-btn danger" style="padding:0.25rem 0.625rem;font-size:0.6875rem;" onclick="banMinerIp('${escapeHtml(m.ip)}')">Ban</button></td>
+        <td>${m.last_seen.toFixed(0)}秒前</td>
+        <td style="text-align:center;"><button class="admin-btn danger" style="padding:0.25rem 0.625rem;font-size:0.6875rem;" onclick="banMinerIp('${escapeHtml(m.ip)}')">封禁</button></td>
       </tr>
     `).join("");
   } catch (_) {}
@@ -73,14 +73,14 @@ async function refreshBlacklist() {
     if (!tbody) return;
 
     if (ips.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="2" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">No banned IPs</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="2" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">暂无封禁 IP</td></tr>`;
       return;
     }
 
     tbody.innerHTML = ips.map(ip => `
       <tr>
         <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;">${escapeHtml(ip)}</td>
-        <td style="text-align:center;"><button class="admin-btn warning" style="padding:0.25rem 0.625rem;font-size:0.6875rem;" onclick="unbanIp('${escapeHtml(ip)}')">Unban</button></td>
+        <td style="text-align:center;"><button class="admin-btn warning" style="padding:0.25rem 0.625rem;font-size:0.6875rem;" onclick="unbanIp('${escapeHtml(ip)}')">解封</button></td>
       </tr>
     `).join("");
   } catch (_) {}
@@ -111,29 +111,29 @@ function escapeHtml(str) {
 
 window.banMinerIp = function (ip) {
   showConfirm(
-    "Ban IP: " + ip,
-    `Ban and disconnect all connections from IP ${ip}. The IP will be blocked from reconnecting.`,
+    "封禁 IP: " + ip,
+    `封禁并断开来自 IP ${ip} 的所有连接。该 IP 将被阻止重新连接。`,
     async () => {
       try {
         const res = await api.kickIp(ip);
-        showToast(res.message || "Done", "success");
+        showToast(res.message || "完成", "success");
         refreshMiners();
         refreshBlacklist();
-      } catch (e) { showToast("Failed: " + e.message, "error"); }
+      } catch (e) { showToast("失败: " + e.message, "error"); }
     },
   );
 };
 
 window.unbanIp = function (ip) {
   showConfirm(
-    "Unban IP: " + ip,
-    `Remove IP ${ip} from the blacklist. The IP will be able to reconnect.`,
+    "解封 IP: " + ip,
+    `将 IP ${ip} 从黑名单中移除。该 IP 将可以重新连接。`,
     async () => {
       try {
         const res = await api.unbanIp(ip);
-        showToast(res.message || "Done", "success");
+        showToast(res.message || "完成", "success");
         refreshBlacklist();
-      } catch (e) { showToast("Failed: " + e.message, "error"); }
+      } catch (e) { showToast("失败: " + e.message, "error"); }
     },
   );
 };

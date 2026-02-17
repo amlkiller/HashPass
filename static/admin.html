@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>HashPass Admin</title>
+    <title>HashPass 管理面板</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -40,9 +40,9 @@
                 </div>
                 <h1 class="gradient-text">HashPass Admin</h1>
             </div>
-            <p>Enter admin token to continue</p>
-            <input type="password" id="login-token" class="login-input" placeholder="Admin Token" autocomplete="off">
-            <button class="login-btn" onclick="adminLogin()">Login</button>
+            <p>输入管理员令牌以继续</p>
+            <input type="password" id="login-token" class="login-input" placeholder="管理员令牌" autocomplete="off">
+            <button class="login-btn" onclick="adminLogin()">登录</button>
             <div id="login-error" class="login-error"></div>
         </div>
     </div>
@@ -62,35 +62,35 @@
             <div class="flex items-center gap-2">
                 <!-- Theme Switcher -->
                 <section class="flex gap-1 p-0.5 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg">
-                    <button class="theme-btn" data-theme="light" title="Light" style="width:1.75rem;height:1.75rem;">
+                    <button class="theme-btn" data-theme="light" title="浅色" style="width:1.75rem;height:1.75rem;">
                         <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
                             <circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/>
                             <path d="M8 1V3M8 13V15M15 8H13M3 8H1M12.5 3.5L11 5M5 11L3.5 12.5M12.5 12.5L11 11M5 5L3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                         </svg>
                     </button>
-                    <button class="theme-btn" data-theme="system" title="System" style="width:1.75rem;height:1.75rem;">
+                    <button class="theme-btn" data-theme="system" title="跟随系统" style="width:1.75rem;height:1.75rem;">
                         <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
                             <rect x="2" y="3" width="12" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/>
                             <path d="M2 9H14" stroke="currentColor" stroke-width="1.5"/>
                         </svg>
                     </button>
-                    <button class="theme-btn active" data-theme="dark" title="Dark" style="width:1.75rem;height:1.75rem;">
+                    <button class="theme-btn active" data-theme="dark" title="深色" style="width:1.75rem;height:1.75rem;">
                         <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
                             <path d="M14 8.5C13.5 11.5 10.5 14 7 14C3.5 14 1 11.5 1 8C1 4.5 3.5 2 7 2C7.5 2 8 2.1 8.5 2.2C7 3.5 6 5.5 6 8C6 10.5 7.5 13 10 14C11.5 13.5 13 12 14 10.5V8.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
                         </svg>
                     </button>
                 </section>
-                <button class="admin-btn" onclick="adminLogout()" style="font-size:0.75rem;padding:0.375rem 0.75rem;">Logout</button>
+                <button class="admin-btn" onclick="adminLogout()" style="font-size:0.75rem;padding:0.375rem 0.75rem;">登出</button>
             </div>
         </header>
 
         <!-- Tabs -->
         <nav class="px-4 sm:px-6 pt-4">
             <div class="admin-tabs">
-                <button class="admin-tab active" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
-                <button class="admin-tab" data-tab="params" onclick="switchTab('params')">Parameters</button>
-                <button class="admin-tab" data-tab="logs" onclick="switchTab('logs')">Logs</button>
-                <button class="admin-tab" data-tab="operations" onclick="switchTab('operations')">Operations</button>
+                <button class="admin-tab active" data-tab="dashboard" onclick="switchTab('dashboard')">仪表盘</button>
+                <button class="admin-tab" data-tab="params" onclick="switchTab('params')">参数</button>
+                <button class="admin-tab" data-tab="logs" onclick="switchTab('logs')">日志</button>
+                <button class="admin-tab" data-tab="operations" onclick="switchTab('operations')">操作</button>
             </div>
         </nav>
 
@@ -102,45 +102,45 @@
                 <!-- Stat Cards -->
                 <div class="stat-grid mb-4">
                     <div class="stat-card">
-                        <div class="stat-label">Active Miners</div>
+                        <div class="stat-label">活跃矿工</div>
                         <div class="stat-value accent" id="stat-miners">--</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Connections</div>
+                        <div class="stat-label">连接数</div>
                         <div class="stat-value" id="stat-connections">--</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Network Hashrate</div>
+                        <div class="stat-label">全网算力</div>
                         <div class="stat-value success" id="stat-hashrate">--</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Difficulty</div>
+                        <div class="stat-label">难度</div>
                         <div class="stat-value warning" id="stat-difficulty">--</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Banned IPs</div>
+                        <div class="stat-label">封禁 IP</div>
                         <div class="stat-value" id="stat-banned" style="color:var(--danger,#ef4444);">0</div>
                     </div>
                 </div>
 
                 <!-- Puzzle Info -->
                 <div class="param-card mb-4">
-                    <h3>Puzzle Info</h3>
+                    <h3>谜题信息</h3>
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div>
-                            <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-1">Seed</div>
+                            <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-1">种子</div>
                             <div class="font-mono text-xs text-[var(--text-secondary)]" id="info-seed">--</div>
                         </div>
                         <div>
-                            <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-1">Mining Time</div>
+                            <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-1">挖矿时间</div>
                             <div class="font-mono text-xs text-[var(--text-secondary)]" id="info-mining-time">--:--:--</div>
                         </div>
                         <div>
-                            <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-1">Last Solve</div>
+                            <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-1">上次求解</div>
                             <div class="font-mono text-xs text-[var(--text-secondary)]" id="info-last-solve">--</div>
                         </div>
                         <div>
-                            <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-1">Status</div>
+                            <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-1">状态</div>
                             <div class="font-mono text-xs font-bold" id="info-mining-status" style="color:var(--text-tertiary)">--</div>
                         </div>
                     </div>
@@ -148,19 +148,19 @@
 
                 <!-- Miners Table -->
                 <div class="param-card">
-                    <h3>Miners</h3>
+                    <h3>矿工</h3>
                     <div class="admin-table-wrap">
                         <table class="admin-table">
                             <thead>
                                 <tr>
                                     <th>IP</th>
-                                    <th>Hashrate</th>
-                                    <th>Last Seen</th>
-                                    <th style="text-align:center;">Action</th>
+                                    <th>算力</th>
+                                    <th>最后活跃</th>
+                                    <th style="text-align:center;">操作</th>
                                 </tr>
                             </thead>
                             <tbody id="miners-tbody">
-                                <tr><td colspan="4" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">Loading...</td></tr>
+                                <tr><td colspan="4" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">加载中...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -168,17 +168,17 @@
 
                 <!-- Banned IPs Table -->
                 <div class="param-card">
-                    <h3>Banned IPs</h3>
+                    <h3>封禁 IP</h3>
                     <div class="admin-table-wrap">
                         <table class="admin-table">
                             <thead>
                                 <tr>
                                     <th>IP</th>
-                                    <th style="text-align:center;">Action</th>
+                                    <th style="text-align:center;">操作</th>
                                 </tr>
                             </thead>
                             <tbody id="blacklist-tbody">
-                                <tr><td colspan="2" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">No banned IPs</td></tr>
+                                <tr><td colspan="2" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">暂无封禁 IP</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -190,63 +190,63 @@
                 <div class="param-grid">
                     <!-- Difficulty -->
                     <div class="param-card">
-                        <h3>Difficulty</h3>
+                        <h3>难度</h3>
                         <div class="param-row">
-                            <label>Current</label>
+                            <label>当前</label>
                             <input type="number" class="param-input" id="param-difficulty" min="1" max="32">
                         </div>
                         <div class="param-row">
-                            <label>Min</label>
+                            <label>最小</label>
                             <input type="number" class="param-input" id="param-min-difficulty" min="1" max="32">
                         </div>
                         <div class="param-row">
-                            <label>Max</label>
+                            <label>最大</label>
                             <input type="number" class="param-input" id="param-max-difficulty" min="1" max="32">
                         </div>
-                        <button class="admin-btn primary" style="align-self:flex-start;" onclick="applyDifficulty()">Apply</button>
+                        <button class="admin-btn primary" style="align-self:flex-start;" onclick="applyDifficulty()">应用</button>
                     </div>
 
                     <!-- Target Time -->
                     <div class="param-card">
-                        <h3>Target Solve Time (seconds)</h3>
+                        <h3>目标求解时间（秒）</h3>
                         <div class="param-row">
-                            <label>Min</label>
+                            <label>最小</label>
                             <input type="number" class="param-input" id="param-target-min" min="1">
                         </div>
                         <div class="param-row">
-                            <label>Max</label>
+                            <label>最大</label>
                             <input type="number" class="param-input" id="param-target-max" min="1">
                         </div>
-                        <button class="admin-btn primary" style="align-self:flex-start;" onclick="applyTargetTime()">Apply</button>
+                        <button class="admin-btn primary" style="align-self:flex-start;" onclick="applyTargetTime()">应用</button>
                     </div>
 
                     <!-- Argon2 -->
                     <div class="param-card">
-                        <h3>Argon2 Parameters</h3>
-                        <div class="warning-banner">Changing Argon2 parameters requires miners to re-fetch puzzle config. Active mining sessions will produce invalid hashes.</div>
+                        <h3>Argon2 参数</h3>
+                        <div class="warning-banner">修改 Argon2 参数后，矿工需要重新获取谜题配置。当前挖矿会话将产生无效哈希。</div>
                         <div class="param-row">
-                            <label>Time Cost</label>
+                            <label>时间开销</label>
                             <input type="number" class="param-input" id="param-time-cost" min="1" max="10">
                         </div>
                         <div class="param-row">
-                            <label>Memory (KB)</label>
+                            <label>内存 (KB)</label>
                             <input type="number" class="param-input" id="param-memory-cost" min="1024" max="1048576" style="width:150px;">
                         </div>
                         <div class="param-row">
-                            <label>Parallelism</label>
+                            <label>并行度</label>
                             <input type="number" class="param-input" id="param-parallelism" min="1" max="8">
                         </div>
-                        <button class="admin-btn primary" style="align-self:flex-start;" onclick="applyArgon2()">Apply</button>
+                        <button class="admin-btn primary" style="align-self:flex-start;" onclick="applyArgon2()">应用</button>
                     </div>
 
                     <!-- Worker Count -->
                     <div class="param-card">
-                        <h3>Frontend Worker Count</h3>
+                        <h3>前端 Worker 数量</h3>
                         <div class="param-row">
-                            <label>Workers</label>
+                            <label>Worker 数</label>
                             <input type="number" class="param-input" id="param-worker-count" min="1" max="32">
                         </div>
-                        <button class="admin-btn primary" style="align-self:flex-start;" onclick="applyWorkerCount()">Apply</button>
+                        <button class="admin-btn primary" style="align-self:flex-start;" onclick="applyWorkerCount()">应用</button>
                     </div>
                 </div>
             </div>
@@ -256,11 +256,11 @@
                 <div class="flex flex-col gap-4">
                     <!-- Search & File Selector -->
                     <div class="search-bar">
-                        <input type="text" class="search-input" id="log-search-input" placeholder="Search (visitor_id, invite_code, IP...)" onkeydown="if(event.key==='Enter')_logsSearch()">
+                        <input type="text" class="search-input" id="log-search-input" placeholder="搜索（visitor_id、邀请码、IP...）" onkeydown="if(event.key==='Enter')_logsSearch()">
                         <select class="file-select" id="log-file-select" onchange="_logsFileChange()">
                             <option>verify.json</option>
                         </select>
-                        <button class="admin-btn primary" onclick="_logsSearch()">Search</button>
+                        <button class="admin-btn primary" onclick="_logsSearch()">搜索</button>
                     </div>
 
                     <!-- Stats Summary -->
@@ -271,17 +271,17 @@
                         <table class="admin-table">
                             <thead>
                                 <tr>
-                                    <th>Time</th>
-                                    <th>Invite Code</th>
-                                    <th>Visitor ID</th>
+                                    <th>时间</th>
+                                    <th>邀请码</th>
+                                    <th>访客 ID</th>
                                     <th>IP</th>
-                                    <th>Diff</th>
-                                    <th>Solve Time</th>
-                                    <th>Adjustment</th>
+                                    <th>难度</th>
+                                    <th>求解时间</th>
+                                    <th>调整</th>
                                 </tr>
                             </thead>
                             <tbody id="logs-tbody">
-                                <tr><td colspan="7" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">Loading...</td></tr>
+                                <tr><td colspan="7" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">加载中...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -295,48 +295,48 @@
             <div class="tab-panel" data-panel="operations" style="display:none;">
                 <div class="param-grid">
                     <div class="op-card">
-                        <h3>Force Reset Puzzle</h3>
-                        <p>Generate a new seed immediately. All current mining progress will be lost.</p>
-                        <button class="admin-btn warning" style="align-self:flex-start;" onclick="opResetPuzzle()">Reset Puzzle</button>
+                        <h3>强制重置谜题</h3>
+                        <p>立即生成新种子。所有当前挖矿进度将丢失。</p>
+                        <button class="admin-btn warning" style="align-self:flex-start;" onclick="opResetPuzzle()">重置谜题</button>
                     </div>
 
                     <div class="op-card">
-                        <h3>Kick All Miners</h3>
-                        <p>Disconnect all WebSocket connections. Miners will need to reconnect and re-verify.</p>
-                        <button class="admin-btn danger" style="align-self:flex-start;" onclick="opKickAll()">Kick All</button>
+                        <h3>踢出所有矿工</h3>
+                        <p>断开所有 WebSocket 连接。矿工需要重新连接并重新验证。</p>
+                        <button class="admin-btn danger" style="align-self:flex-start;" onclick="opKickAll()">全部踢出</button>
                     </div>
 
                     <div class="op-card">
-                        <h3>Clear All Sessions</h3>
-                        <p>Clear all session tokens. Users will need to pass Turnstile verification again.</p>
-                        <button class="admin-btn warning" style="align-self:flex-start;" onclick="opClearSessions()">Clear Sessions</button>
+                        <h3>清除所有会话</h3>
+                        <p>清除所有会话令牌。用户需要重新通过 Turnstile 验证。</p>
+                        <button class="admin-btn warning" style="align-self:flex-start;" onclick="opClearSessions()">清除会话</button>
                     </div>
 
                     <div class="op-card">
-                        <h3>Ban IP</h3>
-                        <p>Ban a specific IP address. The IP will be disconnected and blocked from reconnecting.</p>
+                        <h3>封禁 IP</h3>
+                        <p>封禁指定 IP 地址。该 IP 将被断开连接并阻止重新连接。</p>
                         <div class="flex gap-2 items-center" style="align-self:flex-start;">
-                            <input type="text" class="param-input" id="op-ban-ip-input" placeholder="e.g. 192.168.1.100" style="width:200px;">
-                            <button class="admin-btn danger" onclick="opBanIp()">Ban</button>
+                            <input type="text" class="param-input" id="op-ban-ip-input" placeholder="例如 192.168.1.100" style="width:200px;">
+                            <button class="admin-btn danger" onclick="opBanIp()">封禁</button>
                         </div>
                     </div>
 
                     <div class="op-card">
-                        <h3>Unban IP</h3>
-                        <p>Remove an IP address from the blacklist, allowing it to reconnect.</p>
+                        <h3>解封 IP</h3>
+                        <p>将 IP 地址从黑名单中移除，允许其重新连接。</p>
                         <div class="flex gap-2 items-center" style="align-self:flex-start;">
-                            <input type="text" class="param-input" id="op-unban-ip-input" placeholder="e.g. 192.168.1.100" style="width:200px;">
-                            <button class="admin-btn warning" onclick="opUnbanIp()">Unban</button>
+                            <input type="text" class="param-input" id="op-unban-ip-input" placeholder="例如 192.168.1.100" style="width:200px;">
+                            <button class="admin-btn warning" onclick="opUnbanIp()">解封</button>
                         </div>
                     </div>
 
                     <div class="op-card">
-                        <h3>HMAC Secret</h3>
-                        <p>Set a specific HMAC key (hex) or leave empty to generate a random 256-bit key.</p>
-                        <div class="danger-banner">This will invalidate ALL previously issued invite codes. This action cannot be undone.</div>
+                        <h3>HMAC 密钥</h3>
+                        <p>设置指定的 HMAC 密钥（十六进制），留空则随机生成 256 位密钥。</p>
+                        <div class="danger-banner">此操作将使所有已签发的邀请码失效，且无法撤销。</div>
                         <div class="flex gap-2 items-center" style="align-self:flex-start;">
-                            <input type="text" class="param-input" id="op-hmac-input" placeholder="hex (empty = random)" style="width:280px;">
-                            <button class="admin-btn danger" onclick="opRegenerateHmac()">Apply</button>
+                            <input type="text" class="param-input" id="op-hmac-input" placeholder="十六进制（留空 = 随机）" style="width:280px;">
+                            <button class="admin-btn danger" onclick="opRegenerateHmac()">应用</button>
                         </div>
                     </div>
                 </div>

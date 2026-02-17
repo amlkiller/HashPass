@@ -34,10 +34,10 @@ async function loadLogStats() {
     const el = document.getElementById("log-stats-summary");
     if (!el) return;
     el.innerHTML = `
-      <span>Total: <strong>${stats.total_codes}</strong></span>
-      <span>Visitors: <strong>${stats.unique_visitors}</strong></span>
-      <span>Avg solve: <strong>${stats.avg_solve_time}s</strong></span>
-      <span>Median: <strong>${stats.median_solve_time}s</strong></span>
+      <span>总计: <strong>${stats.total_codes}</strong></span>
+      <span>访客: <strong>${stats.unique_visitors}</strong></span>
+      <span>平均求解: <strong>${stats.avg_solve_time}秒</strong></span>
+      <span>中位数: <strong>${stats.median_solve_time}秒</strong></span>
     `;
   } catch (_) {}
 }
@@ -47,7 +47,7 @@ function renderLogs(data) {
   if (!tbody) return;
 
   if (data.records.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">No records found</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">未找到记录</td></tr>`;
     return;
   }
 
@@ -80,9 +80,9 @@ function renderPagination(data) {
   const el = document.getElementById("logs-pagination");
   if (!el) return;
   el.innerHTML = `
-    <button onclick="window._logsPage(${data.page - 1})" ${data.page <= 1 ? "disabled" : ""}>Prev</button>
+    <button onclick="window._logsPage(${data.page - 1})" ${data.page <= 1 ? "disabled" : ""}>上一页</button>
     <span class="page-info">${data.page} / ${data.pages}</span>
-    <button onclick="window._logsPage(${data.page + 1})" ${data.page >= data.pages ? "disabled" : ""}>Next</button>
+    <button onclick="window._logsPage(${data.page + 1})" ${data.page >= data.pages ? "disabled" : ""}>下一页</button>
   `;
 }
 

@@ -34,8 +34,8 @@ export function showConfirm(title, message, onConfirm) {
       <h3>${escapeHtml(title)}</h3>
       <p>${escapeHtml(message)}</p>
       <div class="modal-actions">
-        <button class="admin-btn" id="modal-cancel">Cancel</button>
-        <button class="admin-btn danger" id="modal-confirm">Confirm</button>
+        <button class="admin-btn" id="modal-cancel">取消</button>
+        <button class="admin-btn danger" id="modal-confirm">确认</button>
       </div>
     </div>
   `;
@@ -101,7 +101,7 @@ window.adminLogin = async function () {
   const token = input.value.trim();
 
   if (!token) {
-    errorEl.textContent = "Please enter admin token";
+    errorEl.textContent = "请输入管理员令牌";
     errorEl.style.display = "block";
     return;
   }
@@ -117,11 +117,11 @@ window.adminLogin = async function () {
       errorEl.style.display = "none";
       showAdmin();
     } else {
-      errorEl.textContent = "Invalid token";
+      errorEl.textContent = "令牌无效";
       errorEl.style.display = "block";
     }
   } catch (e) {
-    errorEl.textContent = "Connection error";
+    errorEl.textContent = "连接错误";
     errorEl.style.display = "block";
   }
 };
