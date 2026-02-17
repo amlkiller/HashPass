@@ -5,14 +5,17 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from typing import Optional
+
 from argon2 import PasswordHasher, Type
-from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 
 from src.core.admin_auth import require_admin
 from src.core.state import state
 from src.models.schemas import (
     AdminArgon2Update,
     AdminDifficultyUpdate,
+    AdminHmacUpdate,
     AdminKickRequest,
     AdminTargetTimeUpdate,
     AdminUnbanRequest,
@@ -422,12 +425,27 @@ async def clear_sessions(_: str = Depends(require_admin)):
 
 
 @admin_router.post("/regenerate-hmac")
-async def regenerate_hmac(_: str = Depends(require_admin)):
-    """重新生成 HMAC 密钥"""
-    import secrets
-    state.hmac_secret = secrets.token_bytes(32)
-    logger.info("HMAC secret regenerated (old invite codes invalidated)")
-    return {"message": "HMAC secret regenerated. All old invite codes are now invalid."}
+async def regenerate_hmac(
+    body: Optional[AdminHmacUpdate] = None,
+    _: str = Depends(require_admin),
+):
+    """设置或随机生成 HMAC 密钥"""
+    if body and body.hmac_secret:
+        hex_str = body.hmac_secret.strip()
+        try:
+            key_bytes = bytes.fromhex(hex_str)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid hex string")
+        if len(key_bytes) < 16:
+            raise HTTPException(status_code=400, detail="HMAC secret must be at least 128-bit (32 hex chars)")
+        state.hmac_secret = key_bytes
+        logger.info("HMAC secret updated via admin panel (%d bytes)", len(key_bytes))
+        return {"message": f"HMAC secret updated ({len(key_bytes) * 8}-bit). All old invite codes are now invalid."}
+    else:
+        import secrets
+        state.hmac_secret = secrets.token_bytes(32)
+        logger.info("HMAC secret regenerated randomly (old invite codes invalidated)")
+        return {"message": "HMAC secret regenerated (256-bit random). All old invite codes are now invalid."}
 
 
 # ===== Admin WebSocket =====

@@ -38,8 +38,12 @@ class SystemState:
         self.is_mining_active: bool = False  # 当前是否有矿工在挖矿
 
         # HMAC 密钥 - 用于派生邀请码（私有，不对外暴露）
-        # 服务器启动时生成，重启后会重新生成（增强安全性）
-        self.hmac_secret = secrets.token_bytes(32)  # 256-bit 密钥
+        # 从环境变量读取（hex 编码），未设置时随机生成
+        hmac_hex = os.getenv("HASHPASS_HMAC_SECRET", "")
+        if hmac_hex:
+            self.hmac_secret = bytes.fromhex(hmac_hex)
+        else:
+            self.hmac_secret = secrets.token_bytes(32)
 
         # 从环境变量读取 Argon2 配置（保存为实例变量以供验证使用）
         self.argon2_time_cost = int(os.getenv("HASHPASS_ARGON2_TIME_COST", "3"))

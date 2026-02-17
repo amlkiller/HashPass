@@ -48,13 +48,21 @@ window.opClearSessions = function () {
 };
 
 window.opRegenerateHmac = function () {
+  const input = document.getElementById("op-hmac-input");
+  const hex = (input?.value || "").trim();
+  const action = hex ? "Set HMAC Secret" : "Regenerate HMAC Secret";
+  const warning = hex
+    ? `Set HMAC secret to the provided key (${hex.length} hex chars). This will invalidate ALL previously issued invite codes.`
+    : "Generate a random 256-bit HMAC secret. This will invalidate ALL previously issued invite codes.";
   showConfirm(
-    "Regenerate HMAC Secret",
-    "WARNING: This will invalidate ALL previously issued invite codes. This action cannot be undone.",
+    action,
+    "WARNING: " + warning,
     async () => {
       try {
-        const res = await api.regenerateHmac();
+        const body = hex ? { hmac_secret: hex } : {};
+        const res = await api.regenerateHmac(body);
         showToast(res.message || "Done", "warning");
+        if (input) input.value = "";
       } catch (e) { showToast("Failed: " + e.message, "error"); }
     },
   );

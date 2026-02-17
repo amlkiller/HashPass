@@ -41,6 +41,9 @@ class AdminArgon2Update(BaseModel):
 class AdminWorkerCountUpdate(BaseModel):
     worker_count: int
 
+class AdminHmacUpdate(BaseModel):
+    hmac_secret: str  # hex 编码的 HMAC 密钥
+
 class AdminKickRequest(BaseModel):
     ip: str
 

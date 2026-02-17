@@ -331,9 +331,13 @@
                     </div>
 
                     <div class="op-card">
-                        <h3>Regenerate HMAC Secret</h3>
+                        <h3>HMAC Secret</h3>
+                        <p>Set a specific HMAC key (hex) or leave empty to generate a random 256-bit key.</p>
                         <div class="danger-banner">This will invalidate ALL previously issued invite codes. This action cannot be undone.</div>
-                        <button class="admin-btn danger" style="align-self:flex-start;" onclick="opRegenerateHmac()">Regenerate HMAC</button>
+                        <div class="flex gap-2 items-center" style="align-self:flex-start;">
+                            <input type="text" class="param-input" id="op-hmac-input" placeholder="hex (empty = random)" style="width:280px;">
+                            <button class="admin-btn danger" onclick="opRegenerateHmac()">Apply</button>
+                        </div>
                     </div>
                 </div>
             </div>

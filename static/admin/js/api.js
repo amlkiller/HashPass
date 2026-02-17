@@ -44,5 +44,5 @@ export const api = {
   unbanIp: (ip) => request("/unban", { method: "POST", body: JSON.stringify({ ip }) }),
   getBlacklist: () => request("/blacklist"),
   clearSessions: () => request("/clear-sessions", { method: "POST" }),
-  regenerateHmac: () => request("/regenerate-hmac", { method: "POST" }),
+  regenerateHmac: (data) => request("/regenerate-hmac", { method: "POST", body: JSON.stringify(data || {}) }),
 };
