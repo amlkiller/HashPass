@@ -435,7 +435,7 @@ progress::-moz-progress-bar {
 }
 
 .hash-rate-display.puzzle.active::before {
-    animation-delay: 0.75s;
+    animation-delay: 0.69s;
 }
 
 /* Inactive */
