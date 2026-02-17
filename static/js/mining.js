@@ -10,6 +10,79 @@ import { updateHashRate, resetHashRate } from "./hashrate.js";
 import { sendHashrateToServer, notifyMiningStart, notifyMiningStop } from "./websocket.js";
 
 /**
+ * 格式化解题时间
+ * @param {number} seconds - 秒数
+ * @returns {string} 格式化后的字符串
+ */
+function formatSolveTime(seconds) {
+  if (seconds == null) return "--";
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return `${m}m${s}s`;
+}
+
+/**
+ * 启动谜题持续时间计时器
+ * @param {number} serverStartTime - 服务器端谜题开始时间（Unix秒）
+ */
+export function startPuzzleDurationTimer(serverStartTime) {
+  state.puzzleStartTime = serverStartTime;
+
+  // 清除旧 interval
+  if (state.puzzleDurationTimer) {
+    clearInterval(state.puzzleDurationTimer);
+  }
+
+  // 激活动画样式
+  const display = document.getElementById("puzzleStatsDisplay");
+  const value = document.getElementById("puzzleDuration");
+  if (display) display.classList.add("active");
+  if (value) value.classList.remove("inactive");
+
+  // 立即更新一次
+  updatePuzzleDuration();
+  state.puzzleDurationTimer = setInterval(updatePuzzleDuration, 1000);
+}
+
+/**
+ * 更新谜题持续时间显示
+ */
+function updatePuzzleDuration() {
+  if (!state.puzzleStartTime) return;
+
+  const elapsed = Math.max(0, Math.floor(Date.now() / 1000 - state.puzzleStartTime));
+  const el = document.getElementById("puzzleDuration");
+  if (!el) return;
+
+  if (elapsed >= 3600) {
+    const h = Math.floor(elapsed / 3600);
+    const m = Math.floor((elapsed % 3600) / 60);
+    const s = elapsed % 60;
+    el.textContent = `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  } else {
+    const m = Math.floor(elapsed / 60);
+    const s = elapsed % 60;
+    el.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+}
+
+/**
+ * 更新解题时间统计显示
+ * @param {number|null} last - 上次解题耗时
+ * @param {number|null} avg - 平均解题耗时
+ */
+export function updateSolveTimeStats(last, avg) {
+  state.lastSolveTime = last;
+  state.averageSolveTime = avg;
+
+  const el = document.getElementById("solveTimeStats");
+  if (!el) return;
+
+  el.textContent = `上次 ${formatSolveTime(last)} / 平均 ${formatSolveTime(avg)}`;
+}
+
+/**
  * 更新挖矿时长显示
  */
 function updateMiningTime() {
@@ -163,6 +236,10 @@ export async function startMining() {
 
     // 更新难度显示
     document.getElementById("difficulty").textContent = puzzle.difficulty;
+
+    // 初始化谜题统计
+    if (puzzle.puzzle_start_time) startPuzzleDurationTimer(puzzle.puzzle_start_time);
+    updateSolveTimeStats(puzzle.last_solve_time ?? null, puzzle.average_solve_time ?? null);
 
     log(`谜题种子: ${puzzle.seed.substring(0, 16)}...`);
     log(`难度: ${puzzle.difficulty} (${puzzle.difficulty} 位前导零比特)`);

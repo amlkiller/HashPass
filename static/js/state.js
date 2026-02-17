@@ -27,4 +27,10 @@ export const state = {
 
   // Session Token 状态
   sessionToken: null,
+
+  // 谜题统计状态
+  puzzleDurationTimer: null,
+  puzzleStartTime: null,
+  lastSolveTime: null,
+  averageSolveTime: null,
 };

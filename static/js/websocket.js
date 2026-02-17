@@ -107,6 +107,18 @@ function handleWebSocketMessage(data) {
   if (data.type === "SESSION_TOKEN") {
     state.sessionToken = data.token;
     log("会话令牌已接收");
+
+    // 初始化谜题统计（无需先点开始挖矿即可看到数据）
+    fetch("/api/puzzle", { headers: { "Authorization": `Bearer ${data.token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(puzzle => {
+        if (!puzzle) return;
+        document.getElementById("difficulty").textContent = puzzle.difficulty;
+        import("./mining.js").then(({ startPuzzleDurationTimer, updateSolveTimeStats }) => {
+          if (puzzle.puzzle_start_time) startPuzzleDurationTimer(puzzle.puzzle_start_time);
+          updateSolveTimeStats(puzzle.last_solve_time ?? null, puzzle.average_solve_time ?? null);
+        });
+      }).catch(() => {});
     return;
   }
   // ===== 新增结束 =====
@@ -121,6 +133,15 @@ function handleWebSocketMessage(data) {
 
     // 更新难度显示
     document.getElementById("difficulty").textContent = data.difficulty;
+
+    // 更新谜题统计
+    if (data.solve_time != null) {
+      log(`上轮用时: ${data.solve_time}s`);
+    }
+    import("./mining.js").then(({ startPuzzleDurationTimer, updateSolveTimeStats }) => {
+      updateSolveTimeStats(data.solve_time ?? null, data.average_solve_time ?? null);
+      if (data.puzzle_start_time) startPuzzleDurationTimer(data.puzzle_start_time);
+    });
 
     // 如果正在挖矿，自动重启挖矿（继续竞争）
     if (state.mining) {

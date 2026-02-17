@@ -10,6 +10,9 @@ class PuzzleResponse(BaseModel):
     time_cost: int
     parallelism: int
     worker_count: int
+    puzzle_start_time: float
+    last_solve_time: Optional[float] = None
+    average_solve_time: Optional[float] = None
 
 class Submission(BaseModel):
     visitorId: str      # ThumbmarkJS 指纹

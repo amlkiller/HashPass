@@ -6,78 +6,78 @@
 /* Dark Theme (Default) */
 :root,
 [data-theme="dark"] {
-    --bg-primary:     #09090b;
-    --bg-secondary:   #18181b;
-    --bg-tertiary:    #27272a;
-    --bg-hover:       #3f3f46;
-    --bg-elevated:    #18181b;
+    --bg-primary: #09090b;
+    --bg-secondary: #18181b;
+    --bg-tertiary: #27272a;
+    --bg-hover: #3f3f46;
+    --bg-elevated: #18181b;
 
-    --border-color:   rgba(255, 255, 255, 0.08);
-    --border-hover:   rgba(255, 255, 255, 0.15);
-    --border-accent:  rgba(99, 102, 241, 0.4);
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(255, 255, 255, 0.15);
+    --border-accent: rgba(99, 102, 241, 0.4);
 
-    --text-primary:   #fafafa;
+    --text-primary: #fafafa;
     --text-secondary: #a1a1aa;
-    --text-tertiary:  #71717a;
+    --text-tertiary: #71717a;
 
-    --accent:         #818cf8;
-    --accent-hover:   #6366f1;
-    --accent-subtle:  rgba(99, 102, 241, 0.12);
+    --accent: #818cf8;
+    --accent-hover: #6366f1;
+    --accent-subtle: rgba(99, 102, 241, 0.12);
 
-    --success:        #34d399;
-    --success-bg:     rgba(52, 211, 153, 0.1);
-    --error:          #f87171;
-    --error-bg:       rgba(248, 113, 113, 0.1);
-    --warning:        #fbbf24;
-    --warning-bg:     rgba(251, 191, 36, 0.1);
+    --success: #34d399;
+    --success-bg: rgba(52, 211, 153, 0.1);
+    --error: #f87171;
+    --error-bg: rgba(248, 113, 113, 0.1);
+    --warning: #fbbf24;
+    --warning-bg: rgba(251, 191, 36, 0.1);
 
-    --shadow-sm:      0 1px 2px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.15);
-    --shadow-md:      0 4px 6px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2);
-    --shadow-lg:      0 10px 25px rgba(0,0,0,0.4), 0 4px 10px rgba(0,0,0,0.3);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.15);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.4), 0 4px 10px rgba(0, 0, 0, 0.3);
 
-    --glass-bg:       rgba(24, 24, 27, 0.7);
-    --glass-border:   rgba(255, 255, 255, 0.06);
+    --glass-bg: rgba(24, 24, 27, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.06);
 
-    --dot-color:      rgba(255, 255, 255, 0.035);
-    --orb-opacity:    0.15;
+    --dot-color: rgba(255, 255, 255, 0.035);
+    --orb-opacity: 0.15;
 }
 
 /* Light Theme */
 [data-theme="light"] {
-    --bg-primary:     #fafafa;
-    --bg-secondary:   #ffffff;
-    --bg-tertiary:    #f4f4f5;
-    --bg-hover:       #e4e4e7;
-    --bg-elevated:    rgba(255,255,255,0.8);
+    --bg-primary: #fafafa;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f4f4f5;
+    --bg-hover: #e4e4e7;
+    --bg-elevated: rgba(255, 255, 255, 0.8);
 
-    --border-color:   rgba(0, 0, 0, 0.08);
-    --border-hover:   rgba(0, 0, 0, 0.15);
-    --border-accent:  rgba(99, 102, 241, 0.3);
+    --border-color: rgba(0, 0, 0, 0.08);
+    --border-hover: rgba(0, 0, 0, 0.15);
+    --border-accent: rgba(99, 102, 241, 0.3);
 
-    --text-primary:   #18181b;
+    --text-primary: #18181b;
     --text-secondary: #52525b;
-    --text-tertiary:  #a1a1aa;
+    --text-tertiary: #a1a1aa;
 
-    --accent:         #6366f1;
-    --accent-hover:   #4f46e5;
-    --accent-subtle:  rgba(99, 102, 241, 0.08);
+    --accent: #6366f1;
+    --accent-hover: #4f46e5;
+    --accent-subtle: rgba(99, 102, 241, 0.08);
 
-    --success:        #10b981;
-    --success-bg:     rgba(16, 185, 129, 0.08);
-    --error:          #ef4444;
-    --error-bg:       rgba(239, 68, 68, 0.06);
-    --warning:        #f59e0b;
-    --warning-bg:     rgba(245, 158, 11, 0.06);
+    --success: #10b981;
+    --success-bg: rgba(16, 185, 129, 0.08);
+    --error: #ef4444;
+    --error-bg: rgba(239, 68, 68, 0.06);
+    --warning: #f59e0b;
+    --warning-bg: rgba(245, 158, 11, 0.06);
 
-    --shadow-sm:      0 1px 2px rgba(0,0,0,0.05);
-    --shadow-md:      0 4px 6px rgba(0,0,0,0.07);
-    --shadow-lg:      0 10px 25px rgba(0,0,0,0.1);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
 
-    --glass-bg:       rgba(255, 255, 255, 0.7);
-    --glass-border:   rgba(0, 0, 0, 0.06);
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.06);
 
-    --dot-color:      rgba(0, 0, 0, 0.04);
-    --orb-opacity:    0.08;
+    --dot-color: rgba(0, 0, 0, 0.04);
+    --orb-opacity: 0.08;
 }
 
 /* ==================== 2. Base / Reset ==================== */
@@ -123,7 +123,12 @@ body::after {
     right: -10%;
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, rgba(139, 92, 246, 0.2) 40%, transparent 70%);
+    background: radial-gradient(
+        circle,
+        rgba(99, 102, 241, 0.4) 0%,
+        rgba(139, 92, 246, 0.2) 40%,
+        transparent 70%
+    );
     opacity: var(--orb-opacity);
     filter: blur(80px);
     pointer-events: none;
@@ -162,14 +167,23 @@ body > * {
 
 /* Subtle pulse — gentle glow for active states */
 @keyframes subtlePulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
 }
 
 /* Shimmer — refined shimmer for active hash rate */
 @keyframes shimmer {
-    0% { left: -100%; }
-    100% { left: 100%; }
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
 }
 
 /* Log slide in — smoother log entry animation */
@@ -196,7 +210,8 @@ body > * {
 
 /* Pulse dot — status indicator */
 @keyframes pulse-dot {
-    0%, 100% {
+    0%,
+    100% {
         opacity: 1;
         transform: scale(1);
     }
@@ -208,7 +223,8 @@ body > * {
 
 /* Pulse glow — hash rate glow */
 @keyframes pulse-glow {
-    0%, 100% {
+    0%,
+    100% {
         text-shadow:
             0 0 20px rgba(129, 140, 248, 0.4),
             0 0 40px rgba(129, 140, 248, 0.15);
@@ -234,13 +250,22 @@ body > * {
 
 /* Button spin — loading state */
 @keyframes button-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Status dot glow pulse */
 @keyframes dotGlow {
-    0%, 100% { box-shadow: 0 0 4px currentColor; }
-    50% { box-shadow: 0 0 10px currentColor, 0 0 20px currentColor; }
+    0%,
+    100% {
+        box-shadow: 0 0 4px currentColor;
+    }
+    50% {
+        box-shadow:
+            0 0 10px currentColor,
+            0 0 20px currentColor;
+    }
 }
 
 /* ==================== 6. Animation Utility Classes ==================== */
@@ -404,6 +429,15 @@ progress::-moz-progress-bar {
     animation: pulse-glow 2s ease-in-out infinite;
 }
 
+/* Puzzle Stats */
+.hash-rate-display.puzzle .hash-rate-value:not(.inactive) {
+    color: #60a5fa;
+}
+
+.hash-rate-display.puzzle.active::before {
+    animation-delay: 0.75s;
+}
+
 /* Inactive */
 .hash-rate-value.inactive {
     color: var(--text-tertiary) !important;
@@ -429,10 +463,23 @@ progress::-moz-progress-bar {
     ) !important;
 }
 
+.hash-rate-display.puzzle.active {
+    background: linear-gradient(
+        135deg,
+        rgba(96, 165, 250, 0.1) 0%,
+        rgba(96, 165, 250, 0.03) 100%
+    ) !important;
+}
+
 /* ==================== 11. Header Gradient Text ==================== */
 
 .gradient-text {
-    background: linear-gradient(135deg, var(--accent) 0%, #a78bfa 50%, var(--text-primary) 100%);
+    background: linear-gradient(
+        135deg,
+        var(--accent) 0%,
+        #a78bfa 50%,
+        var(--text-primary) 100%
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -489,7 +536,9 @@ progress::-moz-progress-bar {
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.1);
     transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
+    transition:
+        width 0.6s,
+        height 0.6s;
 }
 
 .btn-ripple:active::before {
@@ -593,7 +642,7 @@ progress::-moz-progress-bar {
     font-size: 0.75rem;
     font-weight: 700;
     margin-top: 0.0625rem;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: "JetBrains Mono", monospace;
 }
 
 @media (min-width: 640px) {
@@ -611,7 +660,7 @@ progress::-moz-progress-bar {
 }
 
 .log-time {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: "JetBrains Mono", monospace;
     font-size: 0.625rem;
     color: var(--text-tertiary);
     margin-bottom: 0.125rem;
@@ -660,7 +709,7 @@ progress::-moz-progress-bar {
     background: var(--bg-tertiary);
     padding: 0.0625rem 0.3125rem;
     border-radius: 0.25rem;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: "JetBrains Mono", monospace;
     font-size: 0.65rem;
     border: 1px solid var(--border-color);
 }
@@ -713,7 +762,11 @@ progress::-moz-progress-bar {
     overflow: hidden;
     pointer-events: none;
     display: none;
-    transition: opacity 0.3s ease, max-height 0.3s ease, padding 0.3s ease, margin 0.3s ease;
+    transition:
+        opacity 0.3s ease,
+        max-height 0.3s ease,
+        padding 0.3s ease,
+        margin 0.3s ease;
 }
 
 /* ==================== 19. Status Item Hover ==================== */
@@ -829,13 +882,27 @@ input:focus-visible {
 
 /* ==================== 22. Staggered Entrance ==================== */
 
-.left-panel > *:nth-child(1) { animation: fadeUp 0.4s ease-out 0.05s both; }
-.left-panel > *:nth-child(2) { animation: fadeUp 0.4s ease-out 0.1s both; }
-.left-panel > *:nth-child(3) { animation: fadeUp 0.4s ease-out 0.15s both; }
-.left-panel > *:nth-child(4) { animation: fadeUp 0.4s ease-out 0.2s both; }
-.left-panel > *:nth-child(5) { animation: fadeUp 0.4s ease-out 0.25s both; }
-.left-panel > *:nth-child(6) { animation: fadeUp 0.4s ease-out 0.3s both; }
-.left-panel > *:nth-child(7) { animation: fadeUp 0.4s ease-out 0.35s both; }
+.left-panel > *:nth-child(1) {
+    animation: fadeUp 0.4s ease-out 0.05s both;
+}
+.left-panel > *:nth-child(2) {
+    animation: fadeUp 0.4s ease-out 0.1s both;
+}
+.left-panel > *:nth-child(3) {
+    animation: fadeUp 0.4s ease-out 0.15s both;
+}
+.left-panel > *:nth-child(4) {
+    animation: fadeUp 0.4s ease-out 0.2s both;
+}
+.left-panel > *:nth-child(5) {
+    animation: fadeUp 0.4s ease-out 0.25s both;
+}
+.left-panel > *:nth-child(6) {
+    animation: fadeUp 0.4s ease-out 0.3s both;
+}
+.left-panel > *:nth-child(7) {
+    animation: fadeUp 0.4s ease-out 0.35s both;
+}
 
 .right-panel {
     animation: fadeUp 0.5s ease-out 0.15s both;

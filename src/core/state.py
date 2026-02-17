@@ -30,6 +30,8 @@ class SystemState:
         # 时间跟踪
         self.puzzle_start_time = time.time()  # 当前puzzle开始时间（绝对时间）
         self.last_solve_time: Optional[float] = None  # 上次解题耗时
+        self.solve_history: list[float] = []   # 最近N次解题耗时
+        self.solve_history_max: int = 5
 
         # 挖矿状态跟踪（只在有矿工挖矿时计时）
         self.active_miners: Set[WebSocket] = set()  # 正在挖矿的矿工连接
@@ -232,6 +234,12 @@ class SystemState:
         self.last_solve_time = solve_time
         return old_difficulty, self.difficulty, reason
 
+    def record_solve_time(self, solve_time: float) -> None:
+        """记录解题耗时到滑动窗口历史（在原子锁内调用）"""
+        self.solve_history.append(solve_time)
+        if len(self.solve_history) > self.solve_history_max:
+            self.solve_history = self.solve_history[-self.solve_history_max:]
+
     async def start_timeout_checker(self):
         """启动超时检查任务"""
         if self.timeout_task and not self.timeout_task.done():
@@ -306,6 +314,9 @@ class SystemState:
                 "type": "PUZZLE_RESET",
                 "seed": self.current_seed,
                 "difficulty": self.difficulty,
+                "solve_time": round(self.last_solve_time, 2) if self.last_solve_time is not None else None,
+                "average_solve_time": round(sum(self.solve_history) / len(self.solve_history), 2) if self.solve_history else None,
+                "puzzle_start_time": self.puzzle_start_time,
             }
         )
 
@@ -664,6 +675,8 @@ class SystemState:
             "mining_time": round(self.get_current_mining_time(), 2),
             "is_mining_active": self.is_mining_active,
             "last_solve_time": self.last_solve_time,
+            "solve_history": list(self.solve_history),
+            "average_solve_time": round(sum(self.solve_history) / len(self.solve_history), 2) if self.solve_history else None,
             "active_miners": len(self.active_miners),
             "active_connections": len(self.active_connections),
             "session_count": len(self.session_tokens),

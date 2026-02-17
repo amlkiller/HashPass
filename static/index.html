@@ -135,7 +135,7 @@
                 </h4>
             </div>
             <!-- Hash Rate Display -->
-            <div class="hash-rate-container grid grid-cols-1 sm:grid-cols-2 gap-0 border-b border-[var(--border-color)]">
+            <div class="hash-rate-container grid grid-cols-1 sm:grid-cols-3 gap-0 border-b border-[var(--border-color)]">
                 <!-- Local Hash Rate -->
                 <div class="hash-rate-display local flex flex-col items-center justify-center gap-1 sm:gap-1.5 py-5 sm:py-6 px-3 sm:px-4 bg-[var(--bg-tertiary)] transition-all duration-[400ms] relative overflow-hidden border-b sm:border-b-0 sm:border-r border-[var(--border-color)]" id="hashRateDisplay">
                     <div class="hash-rate-label text-[10px] sm:text-xs text-[var(--text-tertiary)] font-semibold uppercase tracking-[0.1em]">本地算力</div>
@@ -144,11 +144,19 @@
                 </div>
 
                 <!-- Network Hash Rate -->
-                <div class="hash-rate-display network flex flex-col items-center justify-center gap-1 sm:gap-1.5 py-5 sm:py-6 px-3 sm:px-4 bg-[var(--bg-tertiary)] transition-all duration-[400ms] relative overflow-hidden" id="networkHashRateDisplay">
+                <div class="hash-rate-display network flex flex-col items-center justify-center gap-1 sm:gap-1.5 py-5 sm:py-6 px-3 sm:px-4 bg-[var(--bg-tertiary)] transition-all duration-[400ms] relative overflow-hidden border-b sm:border-b-0 sm:border-r border-[var(--border-color)]" id="networkHashRateDisplay">
                     <div class="hash-rate-label text-[10px] sm:text-xs text-[var(--text-tertiary)] font-semibold uppercase tracking-[0.1em]">全网算力</div>
                     <div class="hash-rate-value inactive font-mono text-2xl sm:text-3xl lg:text-[2.5rem] font-extrabold text-[var(--text-tertiary)] tracking-tight min-w-[80px] sm:min-w-[100px] text-center transition-all duration-[400ms] leading-none" id="networkHashRateValue">--</div>
                     <div class="hash-rate-unit text-[10px] sm:text-xs text-[var(--text-tertiary)] font-bold uppercase tracking-[0.15em]" id="networkHashRateUnit">H/s</div>
                     <div class="hash-rate-miners text-[10px] text-[var(--text-tertiary)] font-medium tracking-wide" id="networkMiners">0 人在线</div>
+                </div>
+
+                <!-- Puzzle Stats -->
+                <div class="hash-rate-display puzzle flex flex-col items-center justify-center gap-1 sm:gap-1.5 py-5 sm:py-6 px-3 sm:px-4 bg-[var(--bg-tertiary)] transition-all duration-[400ms] relative overflow-hidden border-t sm:border-t-0" id="puzzleStatsDisplay">
+                    <div class="hash-rate-label text-[10px] sm:text-xs text-[var(--text-tertiary)] font-semibold uppercase tracking-[0.1em]">谜题统计</div>
+                    <div class="hash-rate-value inactive font-mono text-2xl sm:text-3xl lg:text-[2.5rem] font-extrabold text-[var(--text-tertiary)] tracking-tight min-w-[80px] sm:min-w-[100px] text-center transition-all duration-[400ms] leading-none" id="puzzleDuration">--:--</div>
+                    <div class="text-[10px] sm:text-xs text-[var(--text-tertiary)] font-bold uppercase tracking-[0.15em]" id="puzzleDurationLabel">已持续</div>
+                    <div class="text-[10px] text-[var(--text-tertiary)] font-medium tracking-wide" id="solveTimeStats">上次 -- / 平均 --</div>
                 </div>
             </div>
             <div id="logBox" class="log-box flex-1 p-3 sm:p-4 overflow-y-auto overflow-x-hidden transition-all duration-300 scroll-smooth"></div>

@@ -146,6 +146,9 @@ async def get_puzzle(
         time_cost=state.ph.time_cost,
         parallelism=state.ph.parallelism,
         worker_count=state.worker_count,
+        puzzle_start_time=state.puzzle_start_time,
+        last_solve_time=state.last_solve_time,
+        average_solve_time=round(sum(state.solve_history) / len(state.solve_history), 2) if state.solve_history else None,
     )
 
 
@@ -234,6 +237,7 @@ async def verify_solution(
 
         # 5.2 动态难度调整
         old_difficulty, new_difficulty, reason = state.adjust_difficulty(solve_time)
+        state.record_solve_time(solve_time)
         logger.info("Difficulty adjustment: %s: %d -> %d", reason, old_difficulty, new_difficulty)
 
         # 5.3 准备验证数据（在锁内）
