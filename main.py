@@ -38,7 +38,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.tailwindcss.com https://challenges.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://static.cloudflareinsights.com",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-            "font-src 'self' https://fonts.gstatic.com https://cdn.tailwindcss.com",
+            "font-src 'self' https://fonts.gstatic.com https://cdn.tailwindcss.com data:",
             "img-src 'self' data:",
             "frame-src https://challenges.cloudflare.com",
             "connect-src 'self' https://cdn.jsdelivr.net https://esm.sh",
