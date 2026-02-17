@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.api.routes import router
+from src.api.admin import admin_router
 from src.core.executor import init_process_pool, shutdown_process_pool
 from src.core.state import state
 from src.core.turnstile import get_turnstile_config
@@ -61,6 +62,9 @@ class UserAgentMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
         if path.startswith("/api/") and path not in self.EXEMPT_PATHS:
+            # 豁免 Admin API（允许 curl 访问）
+            if path.startswith("/api/admin/"):
+                return await call_next(request)
             ua = request.headers.get("user-agent")
             is_valid, reason = validate_user_agent(ua)
             if not is_valid:
@@ -135,6 +139,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 # 挂载 API 路由
 app.include_router(router)
+app.include_router(admin_router)
 
 # 挂载静态文件
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -144,6 +149,12 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 async def root():
     """返回前端页面"""
     return FileResponse("static/index.html")
+
+
+@app.get("/admin")
+async def admin_page():
+    """返回 Admin 控制面板页面"""
+    return FileResponse("static/admin.html")
 
 
 if __name__ == "__main__":

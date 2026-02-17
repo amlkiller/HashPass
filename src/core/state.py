@@ -83,6 +83,12 @@ class SystemState:
         # Session Token 清理任务
         self.cleanup_task: Optional[asyncio.Task] = None
 
+        # Admin WebSocket 连接集合
+        self.admin_connections: Set[WebSocket] = set()
+
+        # IP 黑名单（内存态，重启清空）
+        self.banned_ips: Set[str] = set()
+
     def reset_puzzle(self):
         """重置谜题（获胜后调用）"""
         self.current_seed = secrets.token_hex(16)
@@ -456,6 +462,11 @@ class SystemState:
 
         token_data = self.session_tokens[token]
 
+        # 检查是否已被吊销
+        if token_data.get("revoked"):
+            print(f"[Session Token] ✗ Token 已被吊销 (IP: {token_data['ip']})")
+            return False
+
         # 验证 IP 一致性
         if token_data["ip"] != request_ip:
             print(
@@ -517,6 +528,53 @@ class SystemState:
         print(f"[Session Token] ✓ Token 重连成功 (IP: {token_data['ip']})")
         return True
 
+    def revoke_tokens_by_ip(self, ip: str) -> int:
+        """
+        吊销指定 IP 的所有 Session Token（标记为已吊销）
+
+        Token 不会立即删除，而是由清理任务统一回收。
+        标记后 validate_session_token 会立即拒绝该 Token，
+        阻止前端利用重连机制绕过吊销。
+
+        Args:
+            ip: 要吊销的 IP 地址
+
+        Returns:
+            吊销的 Token 数量
+        """
+        revoked = 0
+        for token, data in self.session_tokens.items():
+            if data.get("ip") == ip and not data.get("revoked"):
+                data["revoked"] = True
+                data["is_connected"] = False
+                data["disconnected_at"] = time.time()
+                data["websocket"] = None
+                revoked += 1
+        if revoked:
+            print(f"[Session Token] 🚫 已吊销 IP {ip} 的 {revoked} 个 Token")
+        return revoked
+
+    def revoke_all_tokens(self) -> int:
+        """
+        吊销所有 Session Token（标记为已吊销）
+
+        Token 不会立即删除，而是由清理任务统一回收。
+
+        Returns:
+            吊销的 Token 数量
+        """
+        revoked = 0
+        for token, data in self.session_tokens.items():
+            if not data.get("revoked"):
+                data["revoked"] = True
+                data["is_connected"] = False
+                data["disconnected_at"] = time.time()
+                data["websocket"] = None
+                revoked += 1
+        if revoked:
+            print(f"[Session Token] 🚫 已吊销全部 {revoked} 个 Token")
+        return revoked
+
     async def start_token_cleanup(self) -> None:
         """启动 Session Token 清理任务（每分钟检查一次）"""
         if self.cleanup_task is not None:
@@ -555,7 +613,7 @@ class SystemState:
 
     async def _cleanup_expired_tokens(self) -> int:
         """
-        清理未连接超过5分钟的 Session Token
+        清理已吊销或未连接超过5分钟的 Session Token
 
         Returns:
             清理的 Token 数量
@@ -564,7 +622,12 @@ class SystemState:
         tokens_to_remove = []
 
         for token, data in self.session_tokens.items():
-            # 只清理未连接状态的 Token
+            # 清理已吊销的 Token
+            if data.get("revoked"):
+                tokens_to_remove.append(token)
+                continue
+
+            # 清理未连接且超时的 Token
             if not data["is_connected"]:
                 disconnected_at = data.get("disconnected_at")
                 if disconnected_at is not None:
@@ -578,6 +641,95 @@ class SystemState:
             del self.session_tokens[token]
 
         return len(tokens_to_remove)
+
+    def get_status_snapshot(self) -> dict:
+        """返回可序列化的全量系统状态快照"""
+        return {
+            "difficulty": self.difficulty,
+            "min_difficulty": self.min_difficulty,
+            "max_difficulty": self.max_difficulty,
+            "target_time_min": self.target_time_min,
+            "target_time_max": self.target_time_max,
+            "current_seed": self.current_seed,
+            "puzzle_start_time": self.puzzle_start_time,
+            "mining_time": round(self.get_current_mining_time(), 2),
+            "is_mining_active": self.is_mining_active,
+            "last_solve_time": self.last_solve_time,
+            "active_miners": len(self.active_miners),
+            "active_connections": len(self.active_connections),
+            "session_count": len(self.session_tokens),
+            "argon2_time_cost": self.argon2_time_cost,
+            "argon2_memory_cost": self.argon2_memory_cost,
+            "argon2_parallelism": self.argon2_parallelism,
+            "worker_count": self.worker_count,
+            "banned_ips_count": len(self.banned_ips),
+        }
+
+    def get_miners_info(self) -> list:
+        """从 client_hashrates 提取矿工列表"""
+        current_time = time.time()
+        miners = []
+        for ws, data in self.client_hashrates.items():
+            miners.append({
+                "ip": data.get("ip", "unknown"),
+                "hashrate": round(data.get("rate", 0), 2),
+                "last_seen": round(current_time - data.get("timestamp", current_time), 1),
+            })
+        return miners
+
+    def get_sessions_info(self) -> list:
+        """从 session_tokens 提取会话列表（去除 WebSocket 引用）"""
+        sessions = []
+        for token_str, data in self.session_tokens.items():
+            sessions.append({
+                "token_preview": token_str[:8] + "...",
+                "ip": data.get("ip", "unknown"),
+                "created_at": data.get("created_at"),
+                "is_connected": data.get("is_connected", False),
+                "disconnected_at": data.get("disconnected_at"),
+            })
+        return sessions
+
+    def ban_ip(self, ip: str) -> bool:
+        """将 IP 加入黑名单，返回是否为新增"""
+        if ip in self.banned_ips:
+            return False
+        self.banned_ips.add(ip)
+        print(f"[Blacklist] + Banned IP: {ip} (total: {len(self.banned_ips)})")
+        return True
+
+    def unban_ip(self, ip: str) -> bool:
+        """将 IP 从黑名单移除，返回是否存在"""
+        if ip not in self.banned_ips:
+            return False
+        self.banned_ips.discard(ip)
+        print(f"[Blacklist] - Unbanned IP: {ip} (total: {len(self.banned_ips)})")
+        return True
+
+    def is_banned(self, ip: str) -> bool:
+        """检查 IP 是否在黑名单中"""
+        return ip in self.banned_ips
+
+    def get_banned_ips(self) -> list[str]:
+        """返回黑名单中所有 IP"""
+        return sorted(self.banned_ips)
+
+    async def broadcast_to_admins(self, message: dict):
+        """广播消息给所有 Admin WebSocket 连接"""
+        if not self.admin_connections:
+            return
+
+        text = json.dumps(message)
+        connections_snapshot = list(self.admin_connections)
+        tasks = [conn.send_text(text) for conn in connections_snapshot]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        disconnected = set()
+        for conn, result in zip(connections_snapshot, results):
+            if isinstance(result, Exception):
+                disconnected.add(conn)
+
+        self.admin_connections -= disconnected
 
 
 # 全局单例

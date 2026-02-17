@@ -130,6 +130,11 @@ async def get_puzzle(
     注意：此端点需要有效的 Session Token。
     客户端应建立 WebSocket 连接后获取 Token，再调用此端点。
     """
+    # 黑名单检查
+    real_ip = request.headers.get("cf-connecting-ip") or request.client.host
+    if state.is_banned(real_ip):
+        raise HTTPException(status_code=403, detail="Access denied")
+
     return PuzzleResponse(
         seed=state.current_seed,
         difficulty=state.difficulty,
@@ -158,6 +163,10 @@ async def verify_solution(
     if not real_ip:
         # 本地开发回退
         real_ip = request.client.host
+
+    # 1.1 黑名单检查
+    if state.is_banned(real_ip):
+        raise HTTPException(status_code=403, detail="Access denied")
 
     # 2. 反作弊：验证 TraceData 中的 IP 是否匹配
     if f"ip={real_ip}" not in sub.traceData:
@@ -313,6 +322,12 @@ async def websocket_endpoint(websocket: WebSocket):
 
     # 2. 获取客户端 IP
     real_ip = websocket.headers.get("cf-connecting-ip") or websocket.client.host
+
+    # 2.1 黑名单检查
+    if state.is_banned(real_ip):
+        print(f"[Blacklist] WebSocket rejected for banned IP: {real_ip}")
+        await websocket.close(code=1008, reason="Access denied")
+        return
 
     # 3. 验证 Token (优先验证 Session Token，失败则验证 Turnstile Token)
     is_session_token = state.validate_session_token(token, real_ip)
