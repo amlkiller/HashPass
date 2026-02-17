@@ -138,6 +138,12 @@
 
 /* ==================== Form Cards ==================== */
 
+.param-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+}
+
 .param-card {
     padding: 1.25rem;
     background: var(--bg-tertiary);
@@ -557,6 +563,10 @@
 @media (max-width: 640px) {
     .stat-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .param-grid {
+        grid-template-columns: 1fr;
     }
 
     .admin-tabs {
