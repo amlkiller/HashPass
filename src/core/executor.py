@@ -3,8 +3,11 @@
 
 使用 ProcessPoolExecutor 绕过 Python GIL，避免 Argon2 验证阻塞事件循环
 """
+import logging
 import os
 from concurrent.futures import ProcessPoolExecutor
+
+logger = logging.getLogger(__name__)
 
 # 全局进程池实例
 _executor: ProcessPoolExecutor | None = None
@@ -31,7 +34,7 @@ def init_process_pool(max_workers: int | None = None) -> ProcessPoolExecutor:
         max_workers = max(1, cpu_count - 1)
 
     _executor = ProcessPoolExecutor(max_workers=max_workers)
-    print(f"[Executor] Process pool initialized with {max_workers} workers")
+    logger.info("Process pool initialized with %d workers", max_workers)
 
     return _executor
 
@@ -63,5 +66,5 @@ def shutdown_process_pool(wait: bool = True) -> None:
 
     if _executor is not None:
         _executor.shutdown(wait=wait)
-        print(f"[Executor] Process pool shutdown (wait={wait})")
+        logger.info("Process pool shutdown (wait=%s)", wait)
         _executor = None

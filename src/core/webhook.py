@@ -1,8 +1,11 @@
-import os
-import asyncio
 import json
+import logging
+import os
 from typing import Optional
+
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 def get_webhook_url() -> Optional[str]:
@@ -64,17 +67,18 @@ async def send_webhook_notification(visitor_id: str, invite_code: str) -> None:
             )
 
             if response.status_code == 200:
-                print(f"[Webhook] ✓ 发送成功 -> {webhook_url}")
-                print(f"[Webhook] Payload: {json.dumps(payload)}")
+                logger.info("Webhook sent successfully -> %s", webhook_url)
+                logger.debug("Webhook payload: %s", json.dumps(payload))
             else:
-                print(
-                    f"[Webhook] ✗ 服务器返回错误状态码: {response.status_code}"
+                logger.warning(
+                    "Webhook server returned error status: %d",
+                    response.status_code,
                 )
-                print(f"[Webhook] Response: {response.text[:200]}")
+                logger.warning("Webhook response: %s", response.text[:200])
 
     except httpx.TimeoutException:
-        print(f"[Webhook] ✗ 请求超时 (5s) -> {webhook_url}")
+        logger.error("Webhook request timed out (5s) -> %s", webhook_url)
     except httpx.RequestError as e:
-        print(f"[Webhook] ✗ 网络请求失败: {e}")
+        logger.error("Webhook network request failed: %s", e)
     except Exception as e:
-        print(f"[Webhook] ✗ 未知错误: {e}")
+        logger.error("Webhook unknown error: %s", e)

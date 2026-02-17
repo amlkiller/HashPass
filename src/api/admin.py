@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import time
 from datetime import datetime
 from pathlib import Path
@@ -17,6 +18,8 @@ from src.models.schemas import (
     AdminUnbanRequest,
     AdminWorkerCountUpdate,
 )
+
+logger = logging.getLogger(__name__)
 
 admin_router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -169,7 +172,10 @@ async def update_difficulty(
         await state.broadcast_puzzle_reset()
         await state.start_timeout_checker()
 
-    print(f"[Admin] Difficulty updated: {state.difficulty} (range: {state.min_difficulty}-{state.max_difficulty}) — puzzle reset")
+    logger.info(
+        "Difficulty updated: %d (range: %d-%d) - puzzle reset",
+        state.difficulty, state.min_difficulty, state.max_difficulty,
+    )
     return {
         "difficulty": state.difficulty,
         "min_difficulty": state.min_difficulty,
@@ -203,7 +209,10 @@ async def update_target_time(
         await state.broadcast_puzzle_reset()
         await state.start_timeout_checker()
 
-    print(f"[Admin] Target time updated: {state.target_time_min}-{state.target_time_max}s — puzzle reset")
+    logger.info(
+        "Target time updated: %d-%ds - puzzle reset",
+        state.target_time_min, state.target_time_max,
+    )
     return {
         "target_time_min": state.target_time_min,
         "target_time_max": state.target_time_max,
@@ -247,7 +256,10 @@ async def update_argon2(
         await state.broadcast_puzzle_reset()
         await state.start_timeout_checker()
 
-    print(f"[Admin] Argon2 params updated: time={state.argon2_time_cost}, mem={state.argon2_memory_cost}KB, par={state.argon2_parallelism} — puzzle reset")
+    logger.info(
+        "Argon2 params updated: time=%d, mem=%dKB, par=%d - puzzle reset",
+        state.argon2_time_cost, state.argon2_memory_cost, state.argon2_parallelism,
+    )
     return {
         "time_cost": state.argon2_time_cost,
         "memory_cost": state.argon2_memory_cost,
@@ -273,7 +285,7 @@ async def update_worker_count(
         await state.broadcast_puzzle_reset()
         await state.start_timeout_checker()
 
-    print(f"[Admin] Worker count updated: {state.worker_count} — puzzle reset")
+    logger.info("Worker count updated: %d - puzzle reset", state.worker_count)
     return {
         "worker_count": state.worker_count,
         "new_seed": state.current_seed[:8] + "...",
@@ -292,7 +304,7 @@ async def reset_puzzle(_: str = Depends(require_admin)):
         await state.broadcast_puzzle_reset()
         await state.start_timeout_checker()
 
-    print(f"[Admin] Puzzle force-reset (old seed: {old_seed}...)")
+    logger.info("Puzzle force-reset (old seed: %s...)", old_seed)
     return {"message": "Puzzle reset", "new_seed": state.current_seed[:8] + "..."}
 
 
@@ -316,7 +328,7 @@ async def kick_all(_: str = Depends(require_admin)):
     state.active_miners.clear()
     state.client_hashrates.clear()
 
-    print(f"[Admin] Kicked all miners ({count} connections, {revoked} sessions revoked)")
+    logger.info("Kicked all miners (%d connections, %d sessions revoked)", count, revoked)
     return {"message": f"Kicked {count} connections, revoked {revoked} sessions"}
 
 
@@ -357,7 +369,10 @@ async def kick_ip(
         except Exception:
             pass
 
-    print(f"[Admin] Kicked IP {target_ip} ({kicked} connections, {revoked} sessions revoked, IP banned)")
+    logger.info(
+        "Kicked IP %s (%d connections, %d sessions revoked, IP banned)",
+        target_ip, kicked, revoked,
+    )
     return {"message": f"Banned and kicked {kicked} connections, revoked {revoked} sessions for IP {target_ip}"}
 
 
@@ -369,7 +384,7 @@ async def unban_ip(
     """解除指定 IP 的封禁"""
     removed = state.unban_ip(body.ip)
     if removed:
-        print(f"[Admin] Unbanned IP {body.ip}")
+        logger.info("Unbanned IP %s", body.ip)
         return {"message": f"Unbanned IP {body.ip}"}
     return {"message": f"IP {body.ip} was not in blacklist"}
 
@@ -402,7 +417,7 @@ async def clear_sessions(_: str = Depends(require_admin)):
         except Exception:
             pass
 
-    print(f"[Admin] Cleared {revoked} session tokens, closed {closed} connections")
+    logger.info("Cleared %d session tokens, closed %d connections", revoked, closed)
     return {"message": f"Cleared {revoked} session tokens, closed {closed} connections"}
 
 
@@ -411,7 +426,7 @@ async def regenerate_hmac(_: str = Depends(require_admin)):
     """重新生成 HMAC 密钥"""
     import secrets
     state.hmac_secret = secrets.token_bytes(32)
-    print("[Admin] HMAC secret regenerated (old invite codes invalidated)")
+    logger.info("HMAC secret regenerated (old invite codes invalidated)")
     return {"message": "HMAC secret regenerated. All old invite codes are now invalid."}
 
 
@@ -433,7 +448,7 @@ async def admin_ws(websocket: WebSocket):
 
     await websocket.accept()
     state.admin_connections.add(websocket)
-    print(f"[Admin WS] Connected (total: {len(state.admin_connections)})")
+    logger.info("Admin WebSocket connected (total: %d)", len(state.admin_connections))
 
     try:
         while True:
@@ -449,4 +464,4 @@ async def admin_ws(websocket: WebSocket):
         pass
     finally:
         state.admin_connections.discard(websocket)
-        print(f"[Admin WS] Disconnected (total: {len(state.admin_connections)})")
+        logger.info("Admin WebSocket disconnected (total: %d)", len(state.admin_connections))

@@ -1,14 +1,16 @@
 import asyncio
 import json
+import logging
 import math
 import os
 import secrets
 import time
-from datetime import datetime
 from typing import Any, Dict, Optional, Set
 
 from argon2 import PasswordHasher, Type
 from fastapi import WebSocket
+
+logger = logging.getLogger(__name__)
 
 
 class SystemState:
@@ -109,10 +111,10 @@ class SystemState:
         if len(self.active_miners) == 0:
             self.is_mining_active = True
             self.last_mining_state_change = time.time()
-            print(f"[Mining Timer] ⏱️ 开始计时 - 首位矿工上线")
+            logger.debug("Mining timer started - first miner online")
 
         self.active_miners.add(ws)
-        print(f"[Active Miners] 矿工上线 | 当前在线: {len(self.active_miners)}")
+        logger.debug("Miner online | active miners: %d", len(self.active_miners))
 
     def stop_miner(self, ws: WebSocket) -> None:
         """记录矿工停止挖矿"""
@@ -124,9 +126,9 @@ class SystemState:
         # 如果是最后一个矿工，暂停计时
         if len(self.active_miners) == 0 and self.is_mining_active:
             self._pause_mining_timer()
-            print(f"[Mining Timer] ⏸️ 暂停计时 - 所有矿工离线")
+            logger.debug("Mining timer paused - all miners offline")
 
-        print(f"[Active Miners] 矿工下线 | 当前在线: {len(self.active_miners)}")
+        logger.debug("Miner offline | active miners: %d", len(self.active_miners))
 
     def _pause_mining_timer(self) -> None:
         """暂停挖矿计时（内部方法）"""
@@ -270,8 +272,9 @@ class SystemState:
                             else:
                                 reason = f"Timeout (mining time: {mining_time:.1f}s) but already at min difficulty"
 
-                            print(
-                                f"[Difficulty Adjustment] {reason}: {old_difficulty} -> {self.difficulty}"
+                            logger.info(
+                                "Difficulty adjustment: %s: %d -> %d",
+                                reason, old_difficulty, self.difficulty,
                             )
 
                             # 重置puzzle
@@ -290,7 +293,7 @@ class SystemState:
             # 任务被取消（正常情况：puzzle被解出）
             pass
         except Exception as e:
-            print(f"[Timeout Checker Error] {e}")
+            logger.error("Timeout checker error: %s", e, exc_info=True)
 
     async def broadcast_puzzle_reset(self):
         """广播 puzzle 重置通知给所有连接的客户端（并行发送）"""
@@ -314,8 +317,8 @@ class SystemState:
         for connection, result in zip(connections_snapshot, results):
             if isinstance(result, Exception):
                 disconnected.add(connection)
-                print(
-                    f"[Broadcast] Failed to send PUZZLE_RESET to connection: {result}"
+                logger.error(
+                    "Failed to send PUZZLE_RESET to connection: %s", result,
                 )
 
         self.active_connections -= disconnected
@@ -395,20 +398,20 @@ class SystemState:
                     await asyncio.sleep(5.0)  # 每5秒
                     stats = await self.get_network_hashrate()
 
-                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    print(
-                        f"[{timestamp}] [全网算力] 总计: {stats['total_hashrate']:.2f} H/s | "
-                        f"活跃矿工: {stats['active_miners']} | "
-                        f"已清理过时: {stats['stale_removed']}"
+                    logger.debug(
+                        "Network hashrate: %.2f H/s | active miners: %d | stale removed: %d",
+                        stats["total_hashrate"],
+                        stats["active_miners"],
+                        stats["stale_removed"],
                     )
 
                     # 广播全网算力到所有连接的客户端
                     await self.broadcast_network_hashrate(stats)
                 except asyncio.CancelledError:
-                    print("[算力聚合] 任务已取消")
+                    logger.debug("Hashrate aggregation task cancelled")
                     break
                 except Exception as e:
-                    print(f"[算力聚合] 错误: {e}")
+                    logger.error("Hashrate aggregation error: %s", e, exc_info=True)
 
         self.aggregation_task = asyncio.create_task(aggregation_loop())
 
@@ -441,8 +444,9 @@ class SystemState:
             "disconnected_at": None,
             "is_connected": True,
         }
-        print(
-            f"[Session Token] ✓ 生成 Token for IP {ip} (连接数: {len(self.session_tokens)})"
+        logger.info(
+            "Session token generated for IP %s (total sessions: %d)",
+            ip, len(self.session_tokens),
         )
         return token
 
@@ -464,13 +468,14 @@ class SystemState:
 
         # 检查是否已被吊销
         if token_data.get("revoked"):
-            print(f"[Session Token] ✗ Token 已被吊销 (IP: {token_data['ip']})")
+            logger.debug("Token revoked (IP: %s)", token_data["ip"])
             return False
 
         # 验证 IP 一致性
         if token_data["ip"] != request_ip:
-            print(
-                f"[Session Token] ✗ IP 不匹配: Token IP={token_data['ip']}, Request IP={request_ip}"
+            logger.debug(
+                "Token IP mismatch: token_ip=%s, request_ip=%s",
+                token_data["ip"], request_ip,
             )
             return False
 
@@ -480,8 +485,9 @@ class SystemState:
             if disconnected_at is not None:
                 time_since_disconnect = time.time() - disconnected_at
                 if time_since_disconnect > self.token_expiry_seconds:
-                    print(
-                        f"[Session Token] ✗ Token 已过期 (断开 {time_since_disconnect:.1f}s > {self.token_expiry_seconds}s)"
+                    logger.debug(
+                        "Token expired (disconnected %.1fs > %ds)",
+                        time_since_disconnect, self.token_expiry_seconds,
                     )
                     return False
 
@@ -502,8 +508,9 @@ class SystemState:
                 data["is_connected"] = False
                 data["disconnected_at"] = time.time()
                 data["websocket"] = None  # 清除 WebSocket 引用，避免内存泄漏
-                print(
-                    f"[Session Token] ⏱️ Token 标记为未连接 (将在5分钟后过期，剩余: {len(self.session_tokens)})"
+                logger.debug(
+                    "Token marked disconnected (will expire in 5min, remaining: %d)",
+                    len(self.session_tokens),
                 )
 
     def reconnect_session_token(self, token: str, websocket: WebSocket) -> bool:
@@ -525,7 +532,7 @@ class SystemState:
         token_data["is_connected"] = True
         token_data["disconnected_at"] = None
 
-        print(f"[Session Token] ✓ Token 重连成功 (IP: {token_data['ip']})")
+        logger.info("Session token reconnected (IP: %s)", token_data["ip"])
         return True
 
     def revoke_tokens_by_ip(self, ip: str) -> int:
@@ -551,7 +558,7 @@ class SystemState:
                 data["websocket"] = None
                 revoked += 1
         if revoked:
-            print(f"[Session Token] 🚫 已吊销 IP {ip} 的 {revoked} 个 Token")
+            logger.info("Revoked %d token(s) for IP %s", revoked, ip)
         return revoked
 
     def revoke_all_tokens(self) -> int:
@@ -572,7 +579,7 @@ class SystemState:
                 data["websocket"] = None
                 revoked += 1
         if revoked:
-            print(f"[Session Token] 🚫 已吊销全部 {revoked} 个 Token")
+            logger.info("Revoked all %d token(s)", revoked)
         return revoked
 
     async def start_token_cleanup(self) -> None:
@@ -586,20 +593,18 @@ class SystemState:
                     await asyncio.sleep(60.0)  # 每60秒检查一次
                     expired_count = await self._cleanup_expired_tokens()
                     if expired_count > 0:
-                        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        print(
-                            f"[{timestamp}] [Session Token Cleanup] "
-                            f"已清理 {expired_count} 个过期 Token | "
-                            f"剩余: {len(self.session_tokens)}"
+                        logger.debug(
+                            "Cleaned up %d expired token(s) | remaining: %d",
+                            expired_count, len(self.session_tokens),
                         )
                 except asyncio.CancelledError:
-                    print("[Session Token Cleanup] 任务已取消")
+                    logger.debug("Session token cleanup task cancelled")
                     break
                 except Exception as e:
-                    print(f"[Session Token Cleanup] 错误: {e}")
+                    logger.error("Session token cleanup error: %s", e, exc_info=True)
 
         self.cleanup_task = asyncio.create_task(cleanup_loop())
-        print("[Session Token Cleanup] ✓ 清理任务已启动")
+        logger.info("Session token cleanup task started")
 
     async def stop_token_cleanup(self) -> None:
         """停止 Session Token 清理任务"""
@@ -695,7 +700,7 @@ class SystemState:
         if ip in self.banned_ips:
             return False
         self.banned_ips.add(ip)
-        print(f"[Blacklist] + Banned IP: {ip} (total: {len(self.banned_ips)})")
+        logger.info("Banned IP: %s (total: %d)", ip, len(self.banned_ips))
         return True
 
     def unban_ip(self, ip: str) -> bool:
@@ -703,7 +708,7 @@ class SystemState:
         if ip not in self.banned_ips:
             return False
         self.banned_ips.discard(ip)
-        print(f"[Blacklist] - Unbanned IP: {ip} (total: {len(self.banned_ips)})")
+        logger.info("Unbanned IP: %s (total: %d)", ip, len(self.banned_ips))
         return True
 
     def is_banned(self, ip: str) -> bool:

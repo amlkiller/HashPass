@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import secrets
 import time
 from datetime import datetime
@@ -17,6 +18,8 @@ from src.core.turnstile import (
 from src.core.webhook import send_webhook_notification
 from src.core.useragent import validate_user_agent
 from src.models.schemas import PuzzleResponse, Submission, VerifyResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
 
@@ -101,8 +104,9 @@ async def append_to_verify_log(verify_data: dict) -> None:
             with open(archive_file, "w", encoding="utf-8") as f:
                 json.dump(records, f, ensure_ascii=False, indent=2)
 
-            print(
-                f"[Log Rotation] Archived {len(records)} records to {archive_file.name}"
+            logger.info(
+                "Log rotation: archived %d records to %s",
+                len(records), archive_file.name,
             )
 
             # 清空主文件记录
@@ -116,7 +120,7 @@ async def append_to_verify_log(verify_data: dict) -> None:
             json.dump(records, f, ensure_ascii=False, indent=2)
 
     except Exception as e:
-        print(f"[File I/O Error] Failed to write verify.json: {e}")
+        logger.error("Failed to write verify.json: %s", e, exc_info=True)
 
 
 @router.get("/puzzle", response_model=PuzzleResponse)
@@ -230,7 +234,7 @@ async def verify_solution(
 
         # 5.2 动态难度调整
         old_difficulty, new_difficulty, reason = state.adjust_difficulty(solve_time)
-        print(f"[Difficulty Adjustment] {reason}: {old_difficulty} -> {new_difficulty}")
+        logger.info("Difficulty adjustment: %s: %d -> %d", reason, old_difficulty, new_difficulty)
 
         # 5.3 准备验证数据（在锁内）
         verify_data = {
@@ -307,7 +311,7 @@ async def websocket_endpoint(websocket: WebSocket):
     ua = websocket.headers.get("user-agent")
     is_valid_ua, ua_reason = validate_user_agent(ua)
     if not is_valid_ua:
-        print(f"[UA Block] WebSocket rejected: {ua_reason} | ua={ua!r}")
+        logger.warning("WebSocket rejected: %s | ua=%r", ua_reason, ua)
         await websocket.close(code=1008, reason=ua_reason)
         return
 
@@ -325,7 +329,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     # 2.1 黑名单检查
     if state.is_banned(real_ip):
-        print(f"[Blacklist] WebSocket rejected for banned IP: {real_ip}")
+        logger.warning("WebSocket rejected for banned IP: %s", real_ip)
         await websocket.close(code=1008, reason="Access denied")
         return
 
@@ -334,7 +338,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     if is_session_token:
         # Session Token 验证成功，重连场景
-        print(f"[WebSocket] Reconnecting with Session Token from IP {real_ip}")
+        logger.info("WebSocket reconnecting with Session Token from IP %s", real_ip)
 
         # 接受连接
         await websocket.accept()
@@ -342,20 +346,20 @@ async def websocket_endpoint(websocket: WebSocket):
 
         # 重新激活 Token（更新 WebSocket 引用和连接状态）
         state.reconnect_session_token(token, websocket)
-        print(f"[WebSocket] Reconnected successfully using existing Session Token")
+        logger.info("WebSocket reconnected successfully using existing Session Token")
 
     else:
         # 尝试验证 Turnstile Token（首次连接场景）
         is_valid, error_message = await verify_turnstile_token(token, real_ip)
 
         if not is_valid:
-            print(f"[WebSocket] Token validation failed for IP {real_ip}: {error_message}")
+            logger.warning("WebSocket token validation failed for IP %s: %s", real_ip, error_message)
             await websocket.close(
                 code=1008, reason=error_message or "Invalid token"
             )
             return
 
-        print(f"[WebSocket] New connection from IP {real_ip} (Turnstile verified)")
+        logger.info("WebSocket new connection from IP %s (Turnstile verified)", real_ip)
 
         # 接受连接
         await websocket.accept()
@@ -367,7 +371,7 @@ async def websocket_endpoint(websocket: WebSocket):
             "type": "SESSION_TOKEN",
             "token": session_token
         })
-        print(f"[WebSocket] Session Token sent to {real_ip}")
+        logger.info("Session Token sent to %s", real_ip)
 
     try:
         # 保持连接活跃，监听客户端消息（如心跳）
@@ -409,12 +413,12 @@ async def websocket_endpoint(websocket: WebSocket):
                 if isinstance(rate, (int, float)) and 0 <= rate < 1_000:
                     await state.update_client_hashrate(websocket, rate, real_ip)
                 else:
-                    print(f"[WebSocket] 无效算力值来自 {real_ip}: {rate}")
+                    logger.warning("Invalid hashrate from %s: %s", real_ip, rate)
 
     except WebSocketDisconnect:
-        print(f"[WebSocket] Client disconnected: {real_ip}")
+        logger.info("WebSocket client disconnected: %s", real_ip)
     except Exception as e:
-        print(f"[WebSocket] Error: {e}")
+        logger.error("WebSocket error: %s", e, exc_info=True)
     finally:
         # ===== 关键修复：确保所有退出路径都清理资源 =====
         # 无论是正常断开、异常还是其他情况，都必须清理连接
@@ -422,7 +426,7 @@ async def websocket_endpoint(websocket: WebSocket):
         await state.remove_client_hashrate(websocket)
         state.stop_miner(websocket)  # 停止挖矿计时
         state.revoke_session_token(websocket)  # 清理 Session Token
-        print(f"[WebSocket] Connection cleaned up for {real_ip}")
+        logger.info("WebSocket connection cleaned up for %s", real_ip)
 
 
 @router.get("/turnstile/config")

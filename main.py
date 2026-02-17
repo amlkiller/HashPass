@@ -1,8 +1,14 @@
+from src.core.log_config import setup_logging
+
+setup_logging()
+
 from src.core.event_loop import init_event_loop
 
 init_event_loop()  # Must be called before any asyncio usage
 
 # 加载环境变量
+import logging
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,6 +26,8 @@ from src.core.executor import init_process_pool, shutdown_process_pool
 from src.core.state import state
 from src.core.turnstile import get_turnstile_config
 from src.core.useragent import validate_user_agent
+
+logger = logging.getLogger(__name__)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -68,7 +76,7 @@ class UserAgentMiddleware(BaseHTTPMiddleware):
             ua = request.headers.get("user-agent")
             is_valid, reason = validate_user_agent(ua)
             if not is_valid:
-                print(f"[UA Block] {reason} | path={path} ua={ua!r}")
+                logger.warning("UA blocked: %s | path=%s ua=%r", reason, path, ua)
                 return JSONResponse(
                     status_code=404,
                     content={"error": "Not found"},
@@ -84,29 +92,29 @@ async def lifespan(app: FastAPI):
 
     loop = asyncio.get_running_loop()
     loop_type = type(loop).__name__
-    print(f"[HashPass] Event loop: {loop_type}")
+    logger.info("Event loop: %s", loop_type)
 
     # 初始化进程池
     init_process_pool()
 
-    print("[HashPass] Starting timeout checker...")
+    logger.info("Starting timeout checker...")
     await state.start_timeout_checker()
-    print("[HashPass] Starting hashrate aggregation...")
+    logger.info("Starting hashrate aggregation...")
     await state.start_hashrate_aggregation()
-    print("[HashPass] Starting session token cleanup...")
+    logger.info("Starting session token cleanup...")
     await state.start_token_cleanup()
-    print(f"[HashPass] Initial difficulty: {state.difficulty}")
-    print(
-        f"[HashPass] Target time range: {state.target_time_min}-{state.target_time_max}s"
+    logger.info("Initial difficulty: %d", state.difficulty)
+    logger.info(
+        "Target time range: %d-%ds", state.target_time_min, state.target_time_max
     )
 
     # 验证 Turnstile 配置
     try:
         site_key, _, test_mode = get_turnstile_config()
         mode_text = "TEST MODE" if test_mode else "PRODUCTION"
-        print(f"[Turnstile] Site Key: {site_key[:20]}... ({mode_text})")
+        logger.info("Turnstile Site Key: %s... (%s)", site_key[:20], mode_text)
     except RuntimeError as e:
-        print(f"[Turnstile] Configuration error: {e}")
+        logger.error("Turnstile configuration error: %s", e)
         raise
 
     yield
@@ -114,11 +122,11 @@ async def lifespan(app: FastAPI):
     # 关闭
     if state.timeout_task and not state.timeout_task.done():
         state.timeout_task.cancel()
-        print("[HashPass] Timeout checker stopped")
+        logger.info("Timeout checker stopped")
     await state.stop_hashrate_aggregation()
-    print("[HashPass] Hashrate aggregation stopped")
+    logger.info("Hashrate aggregation stopped")
     await state.stop_token_cleanup()
-    print("[HashPass] Session token cleanup stopped")
+    logger.info("Session token cleanup stopped")
 
     # 关闭进程池
     shutdown_process_pool(wait=True)

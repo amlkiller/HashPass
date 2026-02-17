@@ -3,12 +3,14 @@ Cloudflare Turnstile 验证模块
 提供 token 验证和测试模式支持
 """
 
-import json
+import logging
 import os
 from typing import Optional, Tuple
 
 import httpx
 from fastapi import HTTPException
+
+logger = logging.getLogger(__name__)
 
 # Turnstile Siteverify API 端点
 SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
@@ -28,7 +30,7 @@ def get_turnstile_config() -> Tuple[str, str, bool]:
     test_mode = os.getenv("TURNSTILE_TEST_MODE", "false").lower() == "true"
 
     if test_mode:
-        print("[Turnstile] Running in TEST MODE - all tokens will pass")
+        logger.info("Running in TEST MODE - all tokens will pass")
         return TEST_SITE_KEY, TEST_SECRET_KEY, True
 
     secret_key = os.getenv("TURNSTILE_SECRET_KEY")
@@ -78,7 +80,7 @@ async def verify_turnstile_token(
         payload["remoteip"] = remote_ip
 
     try:
-        # 调用 Cloudflare Siteverify API (必须使用 application/x-www-form-urlencoded 格式)
+        # 调用 Cloudflare Siteverify API
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.post(SITEVERIFY_URL, json=payload)
             response.raise_for_status()
@@ -90,19 +92,19 @@ async def verify_turnstile_token(
         if not success:
             error_codes = result.get("error-codes", [])
             error_message = f"Turnstile verification failed: {', '.join(error_codes)}"
-            print(f"[Turnstile] Verification failed: {error_codes}")
+            logger.warning("Verification failed: %s", error_codes)
             return False, error_message
 
         # 验证成功
-        print(f"[Turnstile] Token verified successfully for IP: {remote_ip}")
+        logger.info("Token verified successfully for IP: %s", remote_ip)
         return True, None
 
     except httpx.HTTPError as e:
         error_message = f"Turnstile API error: {str(e)}"
-        print(f"[Turnstile] HTTP error: {e}")
+        logger.error("HTTP error: %s", e)
         return False, error_message
 
     except Exception as e:
         error_message = f"Turnstile verification error: {str(e)}"
-        print(f"[Turnstile] Unexpected error: {e}")
+        logger.error("Unexpected error: %s", e)
         return False, error_message

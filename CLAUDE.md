@@ -4,17 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**HashPass** is an innovative invite code distribution system based on Client Puzzles architecture. It uses **Argon2id memory-hard proof-of-work** with an **in-memory atomic lock** to create a fair, race-based invite code system that:
+**HashPass** is an invite code distribution system based on Client Puzzles architecture. It uses **Argon2d memory-hard proof-of-work** with an **in-memory atomic lock** to create a fair, race-based invite code system that:
 
 - Requires no database (pure in-memory state)
-- Uses asyncio.Lock for atomic puzzle seed management
+- Uses `asyncio.Lock` for atomic puzzle seed management
 - Prevents GPU/ASIC farming via memory-hard hashing (64MB+ per computation)
 - Binds computations to IP addresses via Cloudflare Trace data
 - Uses hardware fingerprinting (ThumbmarkJS) to prevent multi-account abuse
+- Provides a real-time admin dashboard for system monitoring and control
 
 ### Core Concept
 
-The system maintains a single global puzzle seed in memory. When a user solves the puzzle (finds a hash with N leading zero bits), they win the invite code and the seed immediately resets - invalidating all other users' work in progress.
+The system maintains a single global puzzle seed in memory. When a user solves the puzzle (finds a hash with N leading zero bits), they win the invite code and the seed immediately resets, invalidating all other users' work in progress.
 
 ## Commands
 
@@ -33,624 +34,293 @@ uvicorn main:app --reload --workers 1
 
 ### Production Deployment
 
-**⚠️ CRITICAL**: Must run with `--workers 1` (single process mode)
-
-Multi-worker deployments will break the atomic lock mechanism since each process has its own memory space.
+**CRITICAL**: Must run with `--workers 1` (single process mode). Multi-worker deployments break the atomic lock mechanism since each process has its own memory space.
 
 ```bash
-# Production deployment
 uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1
-```
-
-### Event Loop Optimization (uvloop)
-
-**Automatic Performance Enhancement**
-
-On Linux/macOS systems, HashPass automatically uses **uvloop** to replace the default asyncio event loop, providing significant performance improvements:
-
-- **WebSocket Broadcasting**: 30-40% faster message delivery to concurrent miners
-- **Atomic Lock Operations**: 5-10% reduced lock contention overhead
-- **Connection Handling**: 2x more concurrent connections supported
-
-**Platform Support**:
-- ✅ **Linux** (production recommended): uvloop active
-- ✅ **macOS**: uvloop active
-- ⚠️ **Windows**: Standard asyncio (uvloop not supported)
-  - Recommended for Windows users: Use WSL2 for production-like performance
-
-**Configuration**:
-No configuration needed - uvloop is automatically detected and installed if available (included in `uvicorn[standard]` dependency).
-
-**Verification**:
-Check startup logs for event loop confirmation:
-```
-[Event Loop] ✓ uvloop installed successfully on linux
-[HashPass] Event loop: Loop
-```
-
-**Technical Details**:
-- uvloop is installed at application startup (main.py:1-2)
-- Installation happens BEFORE asyncio.Lock creation (state.py:16)
-- Single-worker architecture remains unchanged
-- All asyncio primitives (Lock, WebSocket, create_task) work identically
-
-**Rollback**: If needed, disable via environment variable:
-```bash
-export HASHPASS_DISABLE_UVLOOP=true
-python main.py
 ```
 
 ## Architecture
 
-### Backend Structure
+### Directory Structure
 
 ```
+main.py                        # Entry point, FastAPI app, middleware, lifespan
 src/
-├── api/
-│   └── routes.py          # API endpoints (/puzzle, /verify, /ws, /turnstile/config)
-├── core/
-│   ├── state.py           # Global SystemState singleton with asyncio.Lock
-│   ├── crypto.py          # Argon2 verification & HMAC invite code generation
-│   ├── turnstile.py       # Cloudflare Turnstile token verification
-│   ├── webhook.py         # Webhook notification system (async POST on win)
-│   ├── executor.py        # ProcessPoolExecutor for CPU-intensive Argon2 verification
-│   └── event_loop.py      # uvloop initialization and event loop management
-└── models/
-    └── schemas.py         # Pydantic models (PuzzleResponse, Submission, etc.)
+  api/
+    routes.py                  # Public API (/puzzle, /verify, /ws, /turnstile/config, /health, /dev/trace)
+    admin.py                   # Admin API (/admin/status, /admin/difficulty, /admin/kick, etc.)
+  core/
+    state.py                   # Global SystemState singleton (lock, seed, difficulty, sessions, miners)
+    crypto.py                  # Argon2 verification & HMAC invite code generation
+    turnstile.py               # Cloudflare Turnstile token verification
+    webhook.py                 # Async webhook notification on win
+    executor.py                # ProcessPoolExecutor for CPU-intensive Argon2 verification
+    event_loop.py              # uvloop initialization (Linux/macOS)
+    useragent.py               # User-Agent validation (block bots/curl/wget)
+    admin_auth.py              # Admin Bearer token authentication
+  models/
+    schemas.py                 # Pydantic models (public + admin)
+static/
+  index.html                   # Main mining UI
+  app.js                       # Frontend entry point
+  worker.js                    # Web Worker for Argon2 computation
+  js/
+    state.js                   # Global frontend state
+    mining.js                  # Mining orchestration (multi-worker)
+    websocket.js               # WebSocket client (reconnection, Session Token)
+    turnstile.js               # Turnstile widget management
+    hashrate.js                # Hashrate display (local + network)
+    logger.js                  # Log panel with smart highlighting
+    theme.js                   # Light/Dark/System theme switcher
+    utils.js                   # Formatting helpers
+  css/
+    custom.css                 # Custom CSS variables and styles
+  admin.html                   # Admin dashboard page
+  admin/
+    app.js                     # Admin entry point
+    css/admin.css              # Admin-specific styles
+    js/
+      state.js                 # Admin state management
+      api.js                   # Admin API client
+      websocket.js             # Admin WebSocket (real-time status)
+      dashboard.js             # Dashboard tab (metrics, graphs)
+      params.js                # Parameters tab (difficulty, Argon2, workers)
+      logs.js                  # Logs tab (paginated, searchable)
+      operations.js            # Operations tab (kick, ban, reset)
 ```
 
 ### Key Components
 
-#### 1. Global State Management (`src/core/state.py`)
+#### 1. Global State (`src/core/state.py`)
 
-The `SystemState` class maintains:
-- `asyncio.Lock`: Ensures atomic verification (one winner only)
-- `current_seed`: The active puzzle seed (resets on each win)
-- `difficulty`: Number of leading zero bits required in hash (dynamically adjusted)
-- `min_difficulty` / `max_difficulty`: Difficulty adjustment bounds
-- `target_time_min` / `target_time_max`: Target solve time range for difficulty adjustment
-- `hmac_secret`: Server-side secret for generating invite codes (regenerates on restart)
-- `active_connections`: Set of WebSocket connections for real-time notifications
-- `active_miners`: Set of miners currently mining (for accurate time tracking)
-- `client_hashrates`: Dict tracking each client's hashrate for network statistics
-- `puzzle_start_time`: Timestamp when current puzzle started
-- `total_mining_time`: Cumulative mining time (only counts when miners are active)
-- `timeout_task`: Background task for puzzle timeout checking
-- `aggregation_task`: Background task for network hashrate aggregation
+The `SystemState` singleton manages all in-memory state:
 
-**Critical Design**: This is a singleton (`state = SystemState()`). All API requests interact with the same instance.
+- **Puzzle state**: `current_seed`, `difficulty`, `min/max_difficulty`, `target_time_min/max`
+- **Atomic lock**: `asyncio.Lock` for serial verification
+- **Argon2 config**: `argon2_time_cost`, `argon2_memory_cost`, `argon2_parallelism`, `worker_count`
+- **HMAC secret**: 256-bit key for invite code derivation (regenerates on restart)
+- **Mining tracking**: `active_miners` set, `total_mining_time`, `is_mining_active` (pauses when no miners connected)
+- **WebSocket connections**: `active_connections` set for broadcasting
+- **Session Tokens**: `session_tokens` dict mapping token -> {websocket, ip, created_at, is_connected, disconnected_at}
+- **Client hashrates**: `client_hashrates` dict for network statistics aggregation
+- **IP blacklist**: `banned_ips` set (in-memory, clears on restart)
+- **Admin connections**: `admin_connections` set for admin WebSocket
+- **Background tasks**: `timeout_task`, `aggregation_task` (5s interval), `cleanup_task` (60s interval)
 
-**Dynamic Difficulty System**:
-- Automatically adjusts difficulty based on solve times
-- Only counts time when miners are actively mining (pauses when all miners disconnect)
-- Timeout checker runs in background, auto-decreasing difficulty if puzzle unsolved after target_time_max
+#### 2. Authentication & Session Flow
 
-#### 2. Proof-of-Work System
+HashPass uses a two-tier token system:
 
-**Client-side (static/app.js)**:
+1. **Turnstile Token** (single-use): Verified once on initial WebSocket connection
+2. **Session Token** (persistent): Generated by server after Turnstile verification, bound to IP, 5-minute expiry after disconnect
+
+**Flow**:
+1. Page loads -> Turnstile widget renders -> user passes challenge -> token received
+2. Frontend connects WebSocket with Turnstile token: `/api/ws?token=<turnstile_token>`
+3. Server validates Turnstile token once, generates Session Token, sends it back via WebSocket JSON message `{"type": "SESSION_TOKEN", "token": "..."}`
+4. Frontend stores Session Token, uses it as `Authorization: Bearer <token>` for API requests (`/api/puzzle`, `/api/verify`)
+5. On WebSocket disconnect, Session Token is marked as disconnected (not deleted)
+6. On reconnect, frontend connects with Session Token: `/api/ws?token=<session_token>` - server validates and reactivates
+7. Disconnected tokens expire after 5 minutes, cleaned up by background task
+
+#### 3. Proof-of-Work System
+
+**Client-side** (static/worker.js):
 1. Get device fingerprint via ThumbmarkJS
 2. Fetch Cloudflare Trace data (IP binding)
-3. Get puzzle seed from `/api/puzzle`
-4. Compute: `Hash = Argon2id(nonce, salt=seed+fingerprint+traceData)`
-5. Find nonce where hash has N leading zero bits
-6. Submit to `/api/verify`
+3. Fetch puzzle from `/api/puzzle` (with Session Token header)
+4. Spawn N Web Workers (configurable `worker_count` from server)
+5. Each worker: `Hash = Argon2d(nonce.toString(), salt=seed+fingerprint+traceData)`
+6. Workers use stride pattern (nonce += workerCount) to avoid overlap
+7. Find nonce where hash has N leading zero bits
+8. Submit to `/api/verify` (with Session Token header)
 
-**Server-side (src/api/routes.py)**:
-1. Verify IP matches TraceData (anti-proxy attack)
-2. Enter atomic lock critical section
-3. Check seed hasn't changed (first-come-first-served)
-4. Use ProcessPoolExecutor to verify hash (non-blocking, CPU-intensive)
-5. Generate HMAC-derived invite code
-6. Adjust difficulty dynamically based on solve time
-7. Send async Webhook notification (non-blocking)
-8. Reset puzzle seed
-9. Broadcast reset via WebSocket
-10. Restart timeout checker task
+**Server-side** (src/api/routes.py `verify_solution`):
+1. Validate Session Token (IP binding check)
+2. Check IP blacklist
+3. Verify TraceData IP matches request IP
+4. Fast-fail if seed changed (before lock)
+5. Enter atomic lock critical section
+6. Double-check seed (DCL pattern)
+7. Calculate solve time (mining time only)
+8. Verify Argon2 hash via ProcessPoolExecutor (non-blocking)
+9. Generate HMAC-derived invite code
+10. Send async webhook notification
+11. Adjust difficulty based on solve time
+12. Reset puzzle + broadcast PUZZLE_RESET to all clients
+13. Restart timeout checker
+14. Async write to verify.json log (outside lock)
 
-#### 3. Process Pool Executor (`src/core/executor.py`)
+#### 4. Dynamic Difficulty
 
-**Purpose**: Prevents Argon2 verification from blocking the asyncio event loop.
+Uses a proportional step algorithm based on `log2(target_midpoint / solve_time)`:
+- Each +1 bit = 2x harder, each -1 bit = 2x easier
+- Steps clamped to [-4, +4] range per adjustment
+- Timeout auto-decreases by at least 2 bits
+- Mining time only counts when miners are actively connected
 
-**How it works**:
-- ProcessPoolExecutor spawns worker processes (bypasses Python GIL)
-- CPU-intensive hash verification runs in separate process
-- Main event loop remains responsive during verification
-- Initialized at application startup, shutdown at exit
+#### 5. Process Pool Executor (`src/core/executor.py`)
 
-**Configuration**:
-```python
-# Default: CPU cores - 1 (reserves one core for main process)
-max_workers = max(1, os.cpu_count() - 1)
-```
+Prevents Argon2 verification from blocking the asyncio event loop:
+- `ProcessPoolExecutor` with `cpu_count - 1` workers (bypasses GIL)
+- Initialized at startup via `init_process_pool()`, shutdown on exit
+- Used in routes.py: `await loop.run_in_executor(executor, verify_argon2_solution, ...)`
 
-**Integration**:
-```python
-# routes.py:146-159
-executor = get_process_pool()
-is_valid, error_message = await loop.run_in_executor(
-    executor,
-    verify_argon2_solution,  # CPU-intensive function
-    sub.nonce, sub.submittedSeed, sub.visitorId, sub.traceData, sub.hash, state.difficulty
-)
-```
+#### 6. Middleware (`main.py`)
 
-#### 4. Security Mechanisms
+- **SecurityHeadersMiddleware**: Adds CSP, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy to all responses
+- **UserAgentMiddleware**: Blocks non-browser clients (curl, wget, Python, Node, bots) on `/api/` routes. Exempts `/api/health`, `/api/dev/trace`, and `/api/admin/*`
 
-**IP Binding** (`routes.py:121-125`):
-- Salt includes Cloudflare Trace data with user's IP
-- Server validates submitted TraceData matches request IP
-- Prevents "compute on powerful server, submit from user's IP" attacks
+#### 7. Frontend Architecture
 
-**Atomic Lock** (`routes.py:135-215`):
-- `async with state.lock` ensures serial verification
-- First valid solution wins, others get 409 Conflict
-- Seed resets immediately after validation
-
-**HMAC Invite Codes** (`crypto.py:51-85`):
-- Codes derived from `HMAC-SHA256(secret, fingerprint:nonce:seed)`
-- No database needed - code validity can be verified by recomputing HMAC
-- Secret regenerates on server restart (invalidates old codes)
-
-#### 5. Real-time Communication & Network Statistics
-
-**WebSocket Protocol** (`routes.py:247-331`):
-
-**Connection**: Clients connect to `/ws?token=<turnstile_token>` endpoint
-
-**Client → Server Messages**:
-```json
-{"type": "ping"}                              // Heartbeat (get online count)
-{"type": "mining_start"}                      // Notify server mining started
-{"type": "mining_stop"}                       // Notify server mining stopped
-{"type": "hashrate", "payload": {"rate": 123.45}}  // Report client hashrate (H/s)
-```
-
-**Server → Client Messages**:
-```json
-{"type": "PONG", "online": 5}                 // Heartbeat response
-{"type": "PUZZLE_RESET", "seed": "abc...", "difficulty": 4}  // Puzzle reset notification
-{"type": "NETWORK_HASHRATE", "total_hashrate": 456.78, "active_miners": 3, "timestamp": 1234567890.0}
-```
-
-**Network Hashrate Aggregation** (`state.py:267-327`):
-- Clients report hashrate every few seconds via WebSocket
-- Server aggregates all active miners' hashrates
-- Broadcasts network statistics every 2 seconds
-- Stale data (>10s old) automatically pruned
-- Provides real-time visibility into mining competition
-
-**Mining Time Tracking** (`state.py:76-123`):
-- Only counts time when at least one miner is active
-- Pauses timer when all miners disconnect
-- Resumes when first miner reconnects
-- Ensures accurate difficulty adjustment based on actual mining effort
-
-### Frontend
-
-- **Preact** + **Pico.css** for UI
-- **hash-wasm** for client-side Argon2 computation
+- **Tailwind CSS** (CDN) + **Pico.css** + custom CSS variables for styling
+- **hash-wasm** (WASM) for client-side Argon2 computation
 - **ThumbmarkJS** for device fingerprinting
-- **Web Worker** (`worker.js`) for non-blocking hash computation
+- **Web Workers** for non-blocking mining (multi-worker parallelism)
+- **ES Modules** with import maps for dependency management
+- Theme system: Light/Dark/System with localStorage persistence
+
+## API Endpoints
+
+### Public
+
+| Endpoint | Auth | Description |
+|---|---|---|
+| `GET /api/puzzle` | Session Token | Returns seed, difficulty, Argon2 params, worker_count |
+| `POST /api/verify` | Session Token | Submits solution, returns invite code |
+| `WS /api/ws?token=<token>` | Turnstile or Session Token | Real-time puzzle resets + network stats |
+| `GET /api/turnstile/config` | None | Returns Turnstile Site Key and test mode |
+| `GET /api/health` | None | Health check with seed preview |
+| `GET /api/dev/trace` | None | Mock Cloudflare Trace for local dev |
+
+### Admin (all require `Authorization: Bearer <ADMIN_TOKEN>`)
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/admin/status` | Full system state snapshot |
+| `GET /api/admin/miners` | Active miners with hashrates |
+| `GET /api/admin/sessions` | Session Token list |
+| `GET /api/admin/logs` | Paginated logs (search, file selection) |
+| `GET /api/admin/logs/stats` | Aggregate statistics |
+| `POST /api/admin/difficulty` | Adjust difficulty params (resets puzzle) |
+| `POST /api/admin/target-time` | Adjust target time window (resets puzzle) |
+| `POST /api/admin/argon2` | Adjust Argon2 params (resets puzzle) |
+| `POST /api/admin/worker-count` | Set frontend worker count (resets puzzle) |
+| `POST /api/admin/reset-puzzle` | Force puzzle reset |
+| `POST /api/admin/kick-all` | Disconnect all + revoke all tokens |
+| `POST /api/admin/kick` | Ban IP + kick + revoke tokens |
+| `POST /api/admin/unban` | Remove IP from blacklist |
+| `GET /api/admin/blacklist` | View banned IPs |
+| `POST /api/admin/clear-sessions` | Clear all Session Tokens |
+| `POST /api/admin/regenerate-hmac` | Regenerate HMAC secret |
+| `WS /api/admin/ws?token=<admin_token>` | Real-time status updates (every 2s) |
+
+### WebSocket Protocol
+
+**Client -> Server**:
+```json
+{"type": "ping"}
+{"type": "mining_start"}
+{"type": "mining_stop"}
+{"type": "hashrate", "payload": {"rate": 123.45}}
+```
+
+**Server -> Client**:
+```json
+{"type": "SESSION_TOKEN", "token": "..."}
+{"type": "PONG", "online": 5}
+{"type": "PUZZLE_RESET", "seed": "abc...", "difficulty": 12}
+{"type": "NETWORK_HASHRATE", "total_hashrate": 456.78, "active_miners": 3, "timestamp": ...}
+```
+
+## Configuration
+
+### Environment Variables (`.env`)
+
+```bash
+# Server
+PORT=8000
+ADMIN_TOKEN=your_admin_token_here
+
+# Difficulty
+HASHPASS_DIFFICULTY=1              # Initial difficulty (leading zero bits)
+HASHPASS_MIN_DIFFICULTY=1
+HASHPASS_MAX_DIFFICULTY=6
+HASHPASS_TARGET_TIME_MIN=30        # seconds
+HASHPASS_TARGET_TIME_MAX=120       # seconds
+
+# Argon2
+HASHPASS_ARGON2_TIME_COST=3
+HASHPASS_ARGON2_MEMORY_COST=65536  # KB (64MB)
+HASHPASS_ARGON2_PARALLELISM=1
+HASHPASS_WORKER_COUNT=1            # Frontend worker count
+
+# Turnstile
+TURNSTILE_SITE_KEY=your_site_key_here
+TURNSTILE_SECRET_KEY=your_secret_key_here
+TURNSTILE_TEST_MODE=true           # true for dev, false for production
+
+# Webhook (optional)
+WEBHOOK_URL=
+WEBHOOK_TOKEN=
+
+# Performance
+HASHPASS_DISABLE_UVLOOP=false
+```
+
+Argon2 parameter changes must be synchronized between server and client (server provides params via `/api/puzzle`, client uses them in worker.js).
+
+### uvloop (Linux/macOS)
+
+Automatically installed at startup if available. Provides ~30-40% faster WebSocket broadcasting. Disable with `HASHPASS_DISABLE_UVLOOP=true`.
+
+## Data Persistence
+
+### Audit Logs
+
+All successful verifications logged to `verify.json` with automatic rotation at 1000 records (archived to `verify_YYYYMMDD_HHMMSS.json`). Logging is async and non-blocking.
+
+**Log entry fields**: timestamp, invite_code, visitor_id, nonce, hash, seed, real_ip, trace_data, difficulty, solve_time, new_difficulty, adjustment_reason.
 
 ## Important Constraints
 
 ### Single-Process Requirement
 
-**Why**: Python's `asyncio.Lock` and in-memory state are process-local. Multiple workers = multiple independent states = broken atomic guarantees.
-
-**Never do this**:
-```bash
-uvicorn main:app --workers 4  # WRONG - breaks atomic lock
-```
+`asyncio.Lock` and in-memory state are process-local. Multiple workers = multiple independent states = broken atomic guarantees. Always use `--workers 1`.
 
 ### Cloudflare Dependency
 
-The system relies on Cloudflare Trace data for IP binding. For local development:
-- `/api/dev/trace` provides a mock endpoint
-- Set frontend to fetch from this endpoint instead of `/cdn-cgi/trace`
-
-Production deployments should be behind Cloudflare CDN.
+The system relies on Cloudflare Trace data for IP binding. For local development, `/api/dev/trace` provides a mock endpoint.
 
 ### Memory Requirements
 
-Each Argon2 computation uses 64MB RAM (by design - this is the anti-farming mechanism). Concurrent miners on server-side verification can spike memory usage, but verification is fast (~100ms) due to the atomic lock.
+Each Argon2 computation uses 64MB RAM (by design). ProcessPoolExecutor workers add ~50-100MB each base memory.
 
-## Configuration
+## Security
 
-### Environment Variables
+**Prevents**: Automated bots (Turnstile + UA filtering), GPU farms (memory-hard Argon2), proxy attacks (IP binding via TraceData), multi-accounting (device fingerprinting), race conditions (atomic lock), token replay (Session Tokens bound to IP with expiry), script-based attacks (User-Agent validation).
 
-All configuration parameters can be set via environment variables in `.env` file:
+**Does not prevent**: Attackers with matching IP ranges, browser fingerprint spoofing at engine level, users with high-memory systems (by design).
 
-```bash
-# ==================== Server Configuration ====================
-PORT=8000  # Server port (default: 8000)
+## Pydantic Models (`src/models/schemas.py`)
 
-# ==================== Difficulty Settings ====================
-HASHPASS_DIFFICULTY=12              # Initial difficulty (leading zero bits, default 12)
-HASHPASS_MIN_DIFFICULTY=4           # Minimum difficulty (bits)
-HASHPASS_MAX_DIFFICULTY=24          # Maximum difficulty (bits)
-HASHPASS_TARGET_TIME_MIN=30         # Min target solve time (seconds)
-HASHPASS_TARGET_TIME_MAX=120        # Max target solve time (seconds)
-
-# ==================== Argon2 Parameters ====================
-HASHPASS_ARGON2_TIME_COST=3         # Iteration count
-HASHPASS_ARGON2_MEMORY_COST=65536   # Memory in KB (64MB)
-HASHPASS_ARGON2_PARALLELISM=1       # Thread count (keep at 1)
-
-# ==================== Turnstile Configuration ====================
-TURNSTILE_SITE_KEY=your_site_key_here
-TURNSTILE_SECRET_KEY=your_secret_key_here
-TURNSTILE_TEST_MODE=true            # Dev mode (auto-pass)
-
-# ==================== Webhook (Optional) ====================
-WEBHOOK_URL=https://your-domain.com/api/webhook
-WEBHOOK_TOKEN=your_secret_token_here    # Bearer Token for authentication
-
-# ==================== Performance ====================
-HASHPASS_DISABLE_UVLOOP=false       # Disable uvloop (Linux/macOS)
-```
-
-⚠️ **Important**: Changes to Argon2 parameters must be synchronized with client-side code (static/app.js).
-
-### Difficulty Adjustment
-
-Difficulty automatically adjusts based on solve times:
-
-Difficulty scaling (bit-level granularity, each +1 bit = 2x harder):
-- Difficulty 4:  ~16 attempts average (~1 second)
-- Difficulty 8:  ~256 attempts (~15 seconds)
-- Difficulty 12: ~4,096 attempts (~1 minute)
-- Difficulty 16: ~65,536 attempts (~15 minutes)
-- Difficulty 20: ~1M attempts (~4 hours)
-- Difficulty 24: ~16M attempts (~64 hours)
-
-**Automatic Adjustment Rules**:
-- Solve time < `HASHPASS_TARGET_TIME_MIN`: Increase difficulty (if not at max)
-- Solve time > `HASHPASS_TARGET_TIME_MAX`: Decrease difficulty (if not at min)
-- No solution after `HASHPASS_TARGET_TIME_MAX` (mining time): Auto-decrease difficulty + reset puzzle
-
-**Mining Time Tracking**:
-- Only counts time when miners are actively mining
-- Pauses when all miners disconnect
-- Ensures fair difficulty adjustment based on actual mining effort
-
-### Cloudflare Turnstile Configuration
-
-**HashPass** integrates Cloudflare Turnstile for bot protection. All API endpoints (`/api/puzzle`, `/api/verify`) and WebSocket connections require valid Turnstile tokens.
-
-#### Environment Variables
-
-Create a `.env` file in the project root:
-
-```bash
-# Turnstile Configuration
-TURNSTILE_SITE_KEY=your_site_key_here
-TURNSTILE_SECRET_KEY=your_secret_key_here
-TURNSTILE_TEST_MODE=false
-```
-
-**Get your keys**: https://dash.cloudflare.com/?to=/:account/turnstile
-
-#### Test Mode (Development)
-
-For local development without real Turnstile verification:
-
-```bash
-TURNSTILE_TEST_MODE=true
-```
-
-In test mode:
-- Uses Cloudflare's test keys (`1x00000000000000000000AA`)
-- All tokens automatically pass verification
-- No actual API calls to Turnstile servers
-- Widget still renders for UI testing
-
-#### Production Mode
-
-Set real keys in `.env`:
-
-```bash
-TURNSTILE_SITE_KEY=1x00000000000000000000AA  # Your actual site key
-TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA  # Your actual secret key
-TURNSTILE_TEST_MODE=false
-```
-
-#### Token Flow
-
-**Important**: Turnstile tokens can only be verified **once**. HashPass uses a single-verification architecture:
-
-1. **Frontend Initialization**:
-   - Page loads → Turnstile Widget renders
-   - User passes challenge → Token received
-   - UI enabled
-
-2. **WebSocket Connection (Single Token Verification)**:
-   - Token passed as query parameter: `ws://host/api/ws?token=<token>`
-   - Server validates token with Cloudflare Siteverify API **once**
-   - Connection rejected (1008 close code) if invalid
-   - Once connected, WebSocket remains open for real-time communication
-
-3. **API Requests (No Token Re-verification)**:
-   - `/api/puzzle` and `/api/verify` endpoints do NOT verify Turnstile tokens
-   - Clients should establish WebSocket connection first (which validates identity)
-   - API endpoints rely on IP binding, fingerprinting, and atomic lock for security
-
-4. **Token Expiration**:
-   - Tokens expire after 5 minutes
-   - Widget automatically resets and requests new verification
-   - User must reconnect WebSocket with new token
-   - UI disabled until new token obtained
-
-#### Security Mechanisms
-
-**What Turnstile adds**:
-- Bot detection at WebSocket connection (prevents automated mining scripts)
-- Rate limiting (Cloudflare's built-in protections)
-- Challenge-response verification (one-time token validation)
-- IP binding (validates token matches WebSocket connection origin)
-
-**Integration Points**:
-- `src/core/turnstile.py` - Token verification logic
-- `src/api/routes.py:248-274` - WebSocket connection protection
-- `static/app.js` - Frontend token management
-- `static/index.html` - Widget rendering
-
-**Error Handling**:
-- Missing token → WebSocket connection rejected (1008 close code)
-- Expired token → Widget auto-resets, user must reconnect
-- Invalid token → 1008 close code + logged
-- Token already used → Connection fails (tokens are single-use)
-
-### Webhook Notifications
-
-**HashPass** supports asynchronous Webhook notifications to external services when users successfully obtain invite codes.
-
-#### Configuration
-
-Add the Webhook URL to your `.env` file:
-
-```bash
-# Webhook Configuration
-WEBHOOK_URL=https://your-domain.com/api/webhook
-```
-
-Leave empty to disable Webhook functionality:
-
-```bash
-WEBHOOK_URL=
-```
-
-**Bearer Token Authentication (Optional)**:
-
-For secure Webhook endpoints, configure a Bearer Token:
-
-```bash
-# Optional Bearer Token for Webhook authentication
-WEBHOOK_TOKEN=your_secret_token_here
-```
-
-When `WEBHOOK_TOKEN` is set, the system will include it in the request header:
-
-```
-Authorization: Bearer your_secret_token_here
-```
-
-**Security Note**: Keep your `WEBHOOK_TOKEN` secret and never commit it to version control.
-
-#### Webhook Payload
-
-When a user wins an invite code, the system sends a POST request with the following JSON payload:
-
-```json
-{
-  "visitor_id": "abc123def456...",
-  "invite_code": "HASHPASS-XYZ789"
-}
-```
-
-**Fields**:
-- `visitor_id`: Device fingerprint (ThumbmarkJS ID)
-- `invite_code`: Generated HMAC-derived invite code
-
-#### Behavior
-
-**Non-blocking**: Webhook requests are sent asynchronously using `asyncio.create_task()`, ensuring they do not delay the invite code response to the user.
-
-**Timeout**: Webhook requests timeout after 5 seconds.
-
-**Error Handling**: Failed webhooks are logged to console but do NOT affect invite code distribution. Users will receive their codes even if the webhook fails.
-
-**Logs**: Check server logs for webhook status:
-```
-[Webhook] ✓ 发送成功 -> https://your-domain.com/api/webhook
-[Webhook] Payload: {"visitor_id": "...", "invite_code": "..."}
-```
-
-Error logs:
-```
-[Webhook] ✗ 请求超时 (5s) -> https://your-domain.com/api/webhook
-[Webhook] ✗ 网络请求失败: ConnectionError(...)
-[Webhook] ✗ 服务器返回错误状态码: 500
-```
-
-#### Implementation Details
-
-**Module**: `src/core/webhook.py`
-**Integration Point**: `src/api/routes.py:117-123`
-**Triggered**: After successful hash verification, before puzzle reset
-
-#### Security Considerations
-
-**Best Practices**:
-- Use HTTPS endpoints in production (`https://...`)
-- Configure `WEBHOOK_TOKEN` for Bearer Token authentication
-- Implement token verification on your webhook receiver
-- Validate payload structure before processing
-- Rate limit webhook endpoint to prevent abuse
-
-**Authentication Flow**:
-1. Set `WEBHOOK_TOKEN` in your `.env` file
-2. HashPass includes token in request header: `Authorization: Bearer <token>`
-3. Your webhook endpoint validates the token
-4. Reject requests with missing/invalid tokens (return 401/403)
-
-**Example Webhook Receiver** (Python/FastAPI):
-```python
-from fastapi import Header, HTTPException
-
-@app.post("/api/webhook")
-async def receive_webhook(
-    payload: dict,
-    authorization: str = Header(None)
-):
-    # Validate Bearer Token
-    expected_token = os.getenv("WEBHOOK_TOKEN")
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing token")
-
-    token = authorization.replace("Bearer ", "")
-    if token != expected_token:
-        raise HTTPException(status_code=403, detail="Invalid token")
-
-    # Process webhook
-    visitor_id = payload["visitor_id"]
-    invite_code = payload["invite_code"]
-    # ... your logic here
-```
-
-**What Webhook receives**:
-- Device fingerprint (can be used for duplicate detection)
-- Invite code (can be stored in your database)
-
-**What Webhook does NOT receive**:
-- IP address (privacy protection)
-- Hash/nonce values (unnecessary for invite code processing)
-- Timestamp (add server-side if needed)
-
-## API Endpoints
-
-- `GET /api/puzzle` - Returns current seed, difficulty, memory_cost (no token verification)
-- `POST /api/verify` - Submits solution, returns invite code or error (no token verification)
-- `GET /api/turnstile/config` - Returns Turnstile Site Key and test mode status
-- `GET /api/health` - Health check with current seed preview
-- `GET /api/dev/trace` - Development-only Cloudflare Trace mock
-- `WS /api/ws?token=<token>` - WebSocket for real-time communication (verifies Turnstile token once on connection)
-
-## Data Persistence & Audit Logs
-
-The system logs all successful verifications with **automatic log rotation**:
-
-**Main Log File**: `verify.json` (always contains the latest records)
-
-**Archived Files**: `verify_YYYYMMDD_HHMMSS.json` (created when main file reaches 1000 records)
-
-**Log Entry Format**:
-```json
-{
-  "timestamp": "2026-01-08T12:34:56.789Z",
-  "invite_code": "HASHPASS-ABC123",
-  "visitor_id": "device-fingerprint",
-  "nonce": 42856,
-  "hash": "0000abcd...",
-  "seed": "a1b2c3d4...",
-  "real_ip": "203.0.113.45",
-  "trace_data": "ip=203.0.113.45\nts=...",
-  "difficulty": 4,
-  "solve_time": 87.3,
-  "new_difficulty": 4,
-  "adjustment_reason": "Perfect timing (87.3s within 30-120s)"
-}
-```
-
-**Log Rotation Mechanism** (`routes.py:18-61`):
-- Automatically triggers when `verify.json` reaches 1000 records
-- Moves old records to timestamped archive file
-- Resets main file to empty array
-- Prevents unbounded file growth
-- Archive files preserved for historical analysis
-
-**Use Cases**:
-- Security audits (detect suspicious patterns)
-- Performance analysis (solve time distributions)
-- Anti-cheat (identify multi-account behavior)
-- System optimization (tune difficulty parameters)
-- Compliance tracking (record all invite code distributions)
-
-**Note**: Logging is asynchronous and does NOT affect system operation. Failed writes are logged but don't prevent invite code distribution.
-
-## Testing Concurrent Behavior
-
-1. Start server: `python main.py`
-2. Open two browser tabs to `http://localhost:8000`
-3. Click "Start Mining" in both tabs simultaneously
-4. First tab to find a solution wins
-5. Second tab should receive 409 error (seed changed)
-6. If WebSocket is connected, second tab stops automatically
-
-## Security Considerations
-
-**What this system prevents**:
-- **Automated bots** (Cloudflare Turnstile challenge on WebSocket connection)
-- **GPU farms** (memory-hard algorithm)
-- **Proxy/VPN cheating** (IP binding via TraceData)
-- **Multi-accounting** (hardware fingerprinting)
-- **Race conditions** (atomic lock)
-- **Script-based attacks** (Turnstile bot detection at connection time)
-
-**What this system does NOT prevent**:
-- Determined attackers with matching IP ranges
-- Browser fingerprint spoofing at engine level
-- Users with high-memory systems having advantage (by design)
-- API endpoint abuse after successful WebSocket authentication (mitigated by IP binding and fingerprinting)
+- `PuzzleResponse`: seed, difficulty, memory_cost, time_cost, parallelism, worker_count
+- `Submission`: visitorId, nonce, submittedSeed, traceData, hash
+- `VerifyResponse`: invite_code
+- `AdminDifficultyUpdate`: difficulty?, min_difficulty?, max_difficulty?
+- `AdminTargetTimeUpdate`: target_time_min?, target_time_max?
+- `AdminArgon2Update`: time_cost?, memory_cost?, parallelism?
+- `AdminWorkerCountUpdate`: worker_count
+- `AdminKickRequest`: ip
+- `AdminUnbanRequest`: ip
 
 ## Troubleshooting
 
-**"Puzzle already solved" errors**: Normal behavior - someone else won first. Seed has reset.
-
-**"Identity mismatch" errors**: Client's TraceData IP doesn't match server-detected IP. Check Cloudflare configuration or use `/api/dev/trace` for local dev.
-
-**"Missing Turnstile token" errors**:
-- Ensure `.env` file exists with `TURNSTILE_TEST_MODE=true` for development
-- Check browser console for Turnstile Widget errors
-- Verify Turnstile script loaded (check Network tab)
-- Try refreshing the page to reinitialize Widget
-
-**Turnstile Widget not rendering**:
-- Check browser console for JavaScript errors
-- Verify `https://challenges.cloudflare.com/turnstile/v0/api.js` is accessible
-- Ensure no ad blockers are interfering
-- Check `/api/turnstile/config` returns valid Site Key
-
-**WebSocket closes immediately (1008 code)**:
-- Token missing or invalid in WebSocket URL
-- Token may have been used already (tokens are single-use)
-- Refresh page to get new Turnstile token
-- Check server logs for validation errors
-
-**Multiple workers warning**: If deploying with process managers (systemd, supervisor), ensure `--workers 1` is set.
-
-**WebSocket not connecting**: Check CORS settings and ensure WebSocket endpoint is accessible. For production, use `wss://` (secure WebSocket).
-
-**Difficulty not adjusting**:
-- Check that miners are sending `mining_start`/`mining_stop` messages
-- Verify mining time is being tracked (check server logs)
-- Ensure `HASHPASS_MIN_DIFFICULTY` and `HASHPASS_MAX_DIFFICULTY` are set correctly
-- Difficulty only adjusts after a puzzle is solved or times out
-
-**Network hashrate shows 0**:
-- Ensure frontend is sending `hashrate` messages via WebSocket
-- Check that WebSocket connection is established before mining starts
-- Verify `client_hashrates` dict is being populated (server-side debug)
-- Hashrate data becomes stale after 10 seconds of no updates
-
-**High memory usage**:
-- ProcessPoolExecutor creates worker processes (each uses ~50-100MB base memory)
-- Each Argon2 verification uses 64MB temporarily
-- Consider reducing `HASHPASS_ARGON2_MEMORY_COST` for low-memory systems (but reduces anti-farming protection)
-- Default worker count: CPU cores - 1 (can be reduced in `executor.py`)
-
-**Slow verification times**:
-- Check ProcessPoolExecutor is initialized (`[Executor] Process pool initialized` in logs)
-- Verify system has enough CPU cores for worker processes
-- High concurrent verification load may cause queuing
-- Consider tuning `HASHPASS_ARGON2_TIME_COST` (lower = faster, but weaker anti-bot protection)
+- **"Puzzle already solved" (409)**: Normal - someone else won first
+- **"Identity mismatch" (403)**: TraceData IP doesn't match request IP; check Cloudflare config or use `/api/dev/trace`
+- **"Invalid or expired session token" (401)**: Session Token expired or IP changed; refresh page
+- **WebSocket closes with 1008**: Token invalid/expired/banned; refresh page
+- **Difficulty not adjusting**: Check miners send `mining_start`/`mining_stop` messages; check min/max bounds
+- **Network hashrate shows 0**: Ensure frontend sends `hashrate` messages via WebSocket; data becomes stale after 10s
+- **High memory usage**: ProcessPoolExecutor workers + Argon2 64MB per verification; reduce `HASHPASS_ARGON2_MEMORY_COST` or worker count if needed

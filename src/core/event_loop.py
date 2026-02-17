@@ -17,29 +17,29 @@ def init_event_loop():
     """
     # Emergency disable switch (for rollback if needed)
     if os.getenv("HASHPASS_DISABLE_UVLOOP", "false").lower() == "true":
-        print("[Event Loop] uvloop disabled via HASHPASS_DISABLE_UVLOOP")
+        logger.info("uvloop disabled via HASHPASS_DISABLE_UVLOOP")
         return
 
     # Platform detection
     is_unix = sys.platform in ('linux', 'darwin')
 
     if not is_unix:
-        print(f"[Event Loop] Running on {sys.platform} - using standard asyncio")
-        print("[Event Loop] Note: For uvloop performance on Windows, use WSL2")
+        logger.info("Running on %s - using standard asyncio", sys.platform)
+        logger.info("Note: For uvloop performance on Windows, use WSL2")
         return
 
     # Try to install uvloop
     try:
         import uvloop
         uvloop.install()
-        print(f"[Event Loop] ✓ uvloop installed successfully on {sys.platform}")
-        print("[Event Loop] Expected: 30-40% faster WebSocket, 5-10% faster lock ops")
+        logger.info("uvloop installed successfully on %s", sys.platform)
+        logger.info("Expected: 30-40%% faster WebSocket, 5-10%% faster lock ops")
     except ImportError:
-        print("[Event Loop] uvloop not available - using standard asyncio")
-        print("[Event Loop] Install with: pip install uvloop")
+        logger.warning("uvloop not available - using standard asyncio")
+        logger.warning("Install with: pip install uvloop")
     except Exception as e:
-        print(f"[Event Loop] Failed to install uvloop: {e}")
-        print("[Event Loop] Falling back to standard asyncio")
+        logger.error("Failed to install uvloop: %s", e)
+        logger.error("Falling back to standard asyncio")
 
 
 def get_event_loop_info() -> dict:
