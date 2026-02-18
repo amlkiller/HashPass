@@ -118,7 +118,14 @@ function handleWebSocketMessage(data) {
     log("会话令牌已接收");
 
     // 初始化谜题统计（无需先点开始挖矿即可看到数据）
-    fetch("/api/puzzle", { headers: { "Authorization": `Bearer ${data.token}` } })
+    fetch("/api/puzzle", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${data.token}`
+      },
+      body: JSON.stringify({ visitorId: state.visitorId })
+    })
       .then(r => r.ok ? r.json() : null)
       .then(puzzle => {
         if (!puzzle) return;
