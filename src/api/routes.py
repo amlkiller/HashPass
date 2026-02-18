@@ -16,6 +16,7 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+from fastapi.responses import PlainTextResponse
 
 from src.core.crypto import generate_invite_code, verify_argon2_solution
 from src.core.executor import get_process_pool
@@ -229,7 +230,13 @@ async def verify_solution(
         raise HTTPException(status_code=403, detail="Access denied")
 
     # 2. 反作弊：验证 TraceData 中的 IP 是否匹配
-    if f"ip={real_ip}" not in sub.traceData:
+    # 使用与前端相同的逐行解析逻辑（防止子串匹配误判）
+    trace_ip = None
+    for line in sub.traceData.splitlines():
+        if line.startswith("ip="):
+            trace_ip = line[3:].strip()
+            break
+    if trace_ip != real_ip:
         raise HTTPException(
             status_code=403,
             detail="Identity mismatch: TraceData IP doesn't match request IP",
@@ -374,7 +381,7 @@ gateway=off
 rbi=off
 kex=none"""
 
-    return trace_data
+    return PlainTextResponse(trace_data)
 
 
 @router.websocket("/ws")

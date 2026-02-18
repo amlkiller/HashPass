@@ -209,7 +209,7 @@ export async function startMining() {
     // 提取并显示关键信息
     const traceLines = traceData.split("\n");
     const ipLine = traceLines.find((line) => line.startsWith("ip="));
-    const ip = ipLine ? ipLine.slice(3) : "未知";
+    const ip = ipLine ? ipLine.slice(3).trim() : "未知";
     log(`网络身份: ${ip}`);
 
     // 2. 获取当前谜题（需要 Session Token）
