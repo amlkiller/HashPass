@@ -26,7 +26,7 @@ from src.core.turnstile import (
 )
 from src.core.useragent import validate_user_agent
 from src.core.webhook import send_webhook_notification
-from src.models.schemas import PuzzleResponse, Submission, VerifyResponse
+from src.models.schemas import PuzzleRequest, PuzzleResponse, Submission, VerifyResponse
 
 logger = logging.getLogger(__name__)
 
@@ -133,10 +133,11 @@ async def append_to_verify_log(verify_data: dict) -> None:
         logger.error("Failed to write verify.json: %s", e, exc_info=True)
 
 
-@router.get("/puzzle", response_model=PuzzleResponse)
+@router.post("/puzzle", response_model=PuzzleResponse)
 async def get_puzzle(
+    body: PuzzleRequest,
     request: Request,
-    token: str = Depends(verify_session_token),  # ← 新增：Token 验证
+    token: str = Depends(verify_session_token),
 ):
     """
     获取当前谜题
@@ -148,6 +149,22 @@ async def get_puzzle(
     real_ip = _get_real_ip(request)
     if state.is_banned(real_ip):
         raise HTTPException(status_code=403, detail="Access denied")
+
+    # visitorId 绑定与校验
+    token_data = state.session_tokens[token]
+    stored_vid = token_data.get("visitor_id")
+
+    if stored_vid is None:
+        # 首次绑定
+        token_data["visitor_id"] = body.visitorId
+        logger.info("Session %s bound to visitorId %.16s... (IP: %s)", token[:8], body.visitorId, real_ip)
+    elif stored_vid != body.visitorId:
+        # 指纹与会话已绑定的不符
+        logger.warning(
+            "visitorId mismatch for token %s: stored=%.16s..., got=%.16s... (IP: %s)",
+            token[:8], stored_vid, body.visitorId, real_ip,
+        )
+        raise HTTPException(status_code=403, detail="Device fingerprint mismatch")
 
     return PuzzleResponse(
         seed=state.current_seed,
@@ -179,7 +196,7 @@ def check_nonce_speed(nonce: int, solve_time: float) -> tuple[bool, str]:
         return True, ""  # 未配置阈值，禁用检查
 
     if solve_time <= 0:
-        return True, ""  # 无法计算速度，跳过检查
+        return False, ("server solve time wrong")  # 无法计算速度，报错
 
     speed = nonce / solve_time
 
@@ -218,30 +235,40 @@ async def verify_solution(
             detail="Identity mismatch: TraceData IP doesn't match request IP",
         )
 
-    # 3. 快速失败：在进入锁前检查 Seed（减少无效请求的锁等待时间）
+    # 3. 校验 visitorId 与 Session 绑定一致
+    token_data = state.session_tokens.get(token, {})
+    stored_vid = token_data.get("visitor_id")
+    if stored_vid is not None and stored_vid != sub.visitorId:
+        logger.warning(
+            "visitorId mismatch on verify for token %s: stored=%.16s..., got=%.16s... (IP: %s)",
+            token[:8], stored_vid, sub.visitorId, real_ip,
+        )
+        raise HTTPException(status_code=403, detail="Device fingerprint mismatch")
+
+    # 4. 快速失败：在进入锁前检查 Seed（减少无效请求的锁等待时间）
     if state.current_seed != sub.submittedSeed:
         raise HTTPException(
             status_code=409, detail="Puzzle already solved by someone else"
         )
 
-    # 4. 进入原子锁临界区
+    # 5. 进入原子锁临界区
     async with state.lock:
-        # 4.1 二次检查 Seed（Double-Check Locking）
+        # 5.1 二次检查 Seed（Double-Check Locking）
         if state.current_seed != sub.submittedSeed:
             raise HTTPException(
                 status_code=409, detail="Puzzle already solved by someone else"
             )
 
-        # 4.2 计算解题耗时（只统计有矿工挖矿的时间）
+        # 5.2 计算解题耗时（只统计有矿工挖矿的时间）
         solve_time = state.get_current_mining_time()
 
-        # 4.3 检查计算速度（nonce / solve_time）是否超过阈值
+        # 5.3 检查计算速度（nonce / solve_time）是否超过阈值
         speed_ok, speed_error = check_nonce_speed(sub.nonce, solve_time)
         if not speed_ok:
             logger.warning("Speed check failed for IP %s: %s", real_ip, speed_error)
             raise HTTPException(status_code=400, detail=speed_error)
 
-        # 4.4 使用进程池验证哈希解（避免阻塞事件循环）
+        # 5.4 使用进程池验证哈希解（避免阻塞事件循环）
         loop = asyncio.get_running_loop()
         executor = get_process_pool()
 
@@ -264,7 +291,7 @@ async def verify_solution(
                 status_code=400, detail=error_message or "Invalid hash solution"
             )
 
-        # 5. 获胜处理：使用 HMAC 派生邀请码并重置谜题
+        # 6. 获胜处理：使用 HMAC 派生邀请码并重置谜题
         invite_code = generate_invite_code(
             hmac_secret=state.hmac_secret,
             visitor_id=sub.visitorId,
@@ -272,12 +299,12 @@ async def verify_solution(
             seed=sub.submittedSeed,
         )
 
-        # 5.1 异步发送 Webhook 通知（不阻塞响应）
+        # 6.1 异步发送 Webhook 通知（不阻塞响应）
         asyncio.create_task(
             send_webhook_notification(visitor_id=sub.visitorId, invite_code=invite_code)
         )
 
-        # 5.2 动态难度调整
+        # 6.2 动态难度调整
         old_difficulty, new_difficulty, reason = state.adjust_difficulty(solve_time)
         state.record_solve_time(solve_time)
         logger.info(
@@ -287,7 +314,7 @@ async def verify_solution(
             new_difficulty,
         )
 
-        # 5.3 准备验证数据（在锁内）
+        # 6.3 准备验证数据（在锁内）
         verify_data = {
             "timestamp": datetime.now().isoformat(),
             "invite_code": invite_code,
@@ -303,7 +330,7 @@ async def verify_solution(
             "adjustment_reason": reason,
         }
 
-        # 5.4 重置puzzle
+        # 6.4 重置puzzle
         state.reset_puzzle()
 
         # 6. 广播 puzzle 重置通知给所有连接的客户端

@@ -462,6 +462,7 @@ class SystemState:
             "created_at": time.time(),
             "disconnected_at": None,
             "is_connected": True,
+            "visitor_id": None,
         }
         logger.info(
             "Session token generated for IP %s (total sessions: %d)",

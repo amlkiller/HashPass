@@ -214,15 +214,25 @@ export async function startMining() {
 
     // 2. 获取当前谜题（需要 Session Token）
     const puzzleResponse = await fetch("/api/puzzle", {
+      method: "POST",
       headers: {
+        "Content-Type": "application/json",
         "Authorization": `Bearer ${state.sessionToken}`
-      }
+      },
+      body: JSON.stringify({ visitorId: state.visitorId })
     });
 
     // 处理 401 错误
     if (puzzleResponse.status === 401) {
       log("会话已过期，请刷新页面", "error");
       alert("会话已过期，请刷新页面");
+      stopMining();
+      return;
+    }
+
+    if (puzzleResponse.status === 403) {
+      const error = await puzzleResponse.json();
+      log(`访问被拒绝: ${error.detail}`, "error");
       stopMining();
       return;
     }

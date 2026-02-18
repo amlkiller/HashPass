@@ -4,6 +4,10 @@ from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 
 
+class PuzzleRequest(BaseModel):
+    visitorId: str = Field(max_length=128)
+
+
 class PuzzleResponse(BaseModel):
     seed: str
     difficulty: int
