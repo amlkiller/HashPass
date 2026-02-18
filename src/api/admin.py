@@ -7,6 +7,7 @@ from pathlib import Path
 
 from typing import Optional
 
+import aiofiles
 from argon2 import PasswordHasher, Type
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 
@@ -108,22 +109,29 @@ async def get_logs(
 @admin_router.get("/logs/stats")
 async def get_log_stats(_: str = Depends(require_admin)):
     """日志统计"""
-    all_records = []
+    total_codes = 0
+    solve_times = []
+    difficulties = []
+    unique_visitors: set = set()
 
-    # 收集所有日志文件的记录
+    # 逐文件流式处理，避免全量加载 OOM
     for file_name in _list_log_files():
         log_path = Path(file_name)
         if log_path.exists():
             try:
-                with open(log_path, "r", encoding="utf-8") as f:
-                    all_records.extend(json.load(f))
+                async with aiofiles.open(log_path, "r", encoding="utf-8") as f:
+                    content = await f.read()
+                records = json.loads(content)
+                total_codes += len(records)
+                for r in records:
+                    if r.get("solve_time"):
+                        solve_times.append(r["solve_time"])
+                    if r.get("difficulty"):
+                        difficulties.append(r["difficulty"])
+                    if r.get("visitor_id"):
+                        unique_visitors.add(r["visitor_id"])
             except (json.JSONDecodeError, IOError):
                 pass
-
-    total_codes = len(all_records)
-    solve_times = [r.get("solve_time", 0) for r in all_records if r.get("solve_time")]
-    difficulties = [r.get("difficulty", 0) for r in all_records if r.get("difficulty")]
-    unique_visitors = len(set(r.get("visitor_id", "") for r in all_records))
 
     avg_solve_time = sum(solve_times) / len(solve_times) if solve_times else 0
     sorted_times = sorted(solve_times)
@@ -136,7 +144,7 @@ async def get_log_stats(_: str = Depends(require_admin)):
 
     return {
         "total_codes": total_codes,
-        "unique_visitors": unique_visitors,
+        "unique_visitors": len(unique_visitors),
         "avg_solve_time": round(avg_solve_time, 2),
         "median_solve_time": round(median_solve_time, 2),
         "difficulty_distribution": difficulty_dist,
@@ -370,19 +378,11 @@ async def kick_ip(
     # 1. 吊销该 IP 的所有 Token（阻止前端重连时通过 validate 校验）
     revoked = state.revoke_tokens_by_ip(target_ip)
 
-    # 2. 收集需要踢出的 WebSocket 连接
-    to_kick = []
-    for ws, data in list(state.client_hashrates.items()):
-        if data.get("ip") == target_ip:
-            to_kick.append(ws)
-
-    # 也从 session_tokens 找（token 已 revoked 但 websocket 引用已被清空，
-    # 此处作为兜底检查 active_connections）
-    for ws in list(state.active_connections):
-        # 通过 client_hashrates 中的 IP 信息匹配
-        hr_data = state.client_hashrates.get(ws)
-        if hr_data and hr_data.get("ip") == target_ip and ws not in to_kick:
-            to_kick.append(ws)
+    # 2. 收集需要踢出的 WebSocket 连接（一次遍历）
+    to_kick = [
+        ws for ws, data in list(state.client_hashrates.items())
+        if data.get("ip") == target_ip
+    ]
 
     # 3. 关闭 WebSocket 连接
     kicked = 0
@@ -493,7 +493,7 @@ async def admin_ws(websocket: WebSocket):
         while True:
             # 每 2 秒推送状态
             snapshot = state.get_status_snapshot()
-            network = await state.get_network_hashrate()
+            network = state.get_network_hashrate()
             snapshot["total_hashrate"] = round(network["total_hashrate"], 2)
             await websocket.send_json({"type": "STATUS_UPDATE", **snapshot})
             await asyncio.sleep(2)

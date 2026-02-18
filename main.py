@@ -24,7 +24,7 @@ from src.api.routes import router
 from src.api.admin import admin_router
 from src.core.executor import init_process_pool, shutdown_process_pool
 from src.core.state import state
-from src.core.turnstile import get_turnstile_config
+from src.core.turnstile import close_turnstile_client, get_turnstile_config
 from src.core.useragent import validate_user_agent
 
 logger = logging.getLogger(__name__)
@@ -127,6 +127,9 @@ async def lifespan(app: FastAPI):
     logger.info("Hashrate aggregation stopped")
     await state.stop_token_cleanup()
     logger.info("Session token cleanup stopped")
+
+    # 关闭 Turnstile HTTP 客户端
+    await close_turnstile_client()
 
     # 关闭进程池
     shutdown_process_pool(wait=True)

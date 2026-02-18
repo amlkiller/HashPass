@@ -7,6 +7,15 @@ import { state } from "./state.js";
 import { log } from "./logger.js";
 import { updateNetworkHashRate, resetNetworkHashRate } from "./hashrate.js";
 
+// 缓存 mining.js 动态导入结果，避免重复加载路径查找
+let _miningModule = null;
+async function getMining() {
+  if (!_miningModule) {
+    _miningModule = await import("./mining.js");
+  }
+  return _miningModule;
+}
+
 /**
  * 更新 WebSocket 状态显示
  * @param {string} status - 状态 (connected, connecting, disconnected, error)
@@ -114,7 +123,7 @@ function handleWebSocketMessage(data) {
       .then(puzzle => {
         if (!puzzle) return;
         document.getElementById("difficulty").textContent = puzzle.difficulty;
-        import("./mining.js").then(({ startPuzzleDurationTimer, updateSolveTimeStats }) => {
+        getMining().then(({ startPuzzleDurationTimer, updateSolveTimeStats }) => {
           if (puzzle.puzzle_start_time) startPuzzleDurationTimer(puzzle.puzzle_start_time);
           updateSolveTimeStats(puzzle.last_solve_time ?? null, puzzle.average_solve_time ?? null);
         });
@@ -138,7 +147,7 @@ function handleWebSocketMessage(data) {
     if (data.solve_time != null) {
       log(`上轮用时: ${data.solve_time}s`);
     }
-    import("./mining.js").then(({ startPuzzleDurationTimer, updateSolveTimeStats }) => {
+    getMining().then(({ startPuzzleDurationTimer, updateSolveTimeStats }) => {
       updateSolveTimeStats(data.solve_time ?? null, data.average_solve_time ?? null);
       if (data.puzzle_start_time) startPuzzleDurationTimer(data.puzzle_start_time);
     });
@@ -147,7 +156,7 @@ function handleWebSocketMessage(data) {
     if (state.mining) {
       log("正在自动重启挖矿...");
       // 动态导入 mining.js 以避免循环依赖
-      import("./mining.js").then(({ stopMining, startMining }) => {
+      getMining().then(({ stopMining, startMining }) => {
         stopMining();
         // 延迟100ms后重新开始，确保停止完成
         setTimeout(() => {
@@ -244,7 +253,7 @@ export function connectWebSocket(isReconnect = false) {
 
       // 会话过期，立即停止挖矿并禁用UI
       if (state.mining) {
-        import("./mining.js").then(({ stopMining }) => {
+        getMining().then(({ stopMining }) => {
           stopMining();
           log("会话过期，挖矿已自动停止", "warning");
         });
@@ -282,7 +291,7 @@ function attemptReconnect() {
 
     // 无令牌，停止挖矿并禁用UI
     if (state.mining) {
-      import("./mining.js").then(({ stopMining }) => {
+      getMining().then(({ stopMining }) => {
         stopMining();
         log("无有效令牌，挖矿已自动停止", "warning");
       });
@@ -312,7 +321,7 @@ function attemptReconnect() {
 
     // 重连全部失败，停止挖矿并禁用UI
     if (state.mining) {
-      import("./mining.js").then(({ stopMining }) => {
+      getMining().then(({ stopMining }) => {
         stopMining();
         log("重连失败，挖矿已自动停止", "warning");
       });

@@ -8,6 +8,11 @@ import { escapeHtml } from "./utils.js";
 // 日志配置
 const MAX_LOG_ENTRIES = 200; // 最大日志条目数，超过后自动删除旧日志
 
+// 预编译高亮正则（模块级，避免每次 log() 调用重建）
+const RE_HASH = /(Seed|Hash|哈希|Nonce):\s*([a-f0-9]{16,})/gi;
+const RE_NUM  = /(难度|内存需求|总耗时|耗时|Difficulty|Memory|Time):\s*(\d+\.?\d*)(MB|秒|s)?/gi;
+const RE_FP   = /\b([a-f0-9]{8})\b/g;
+
 /**
  * 输出日志到日志面板
  * @param {string} message - 日志消息
@@ -78,19 +83,19 @@ export function log(message, type = "info") {
   // 智能高亮：仅高亮特定模式
   // 1. 高亮 "标签: 值" 格式的哈希值
   processedMessage = processedMessage.replace(
-    /(Seed|Hash|哈希|Nonce):\s*([a-f0-9]{16,})/gi,
+    RE_HASH,
     '$1: <span class="log-highlight">$2</span>',
   );
 
   // 2. 高亮 "标签: 数字" 或 "标签: 数字单位" 格式（如：难度: 1、内存: 64MB、总耗时: 5秒）
   processedMessage = processedMessage.replace(
-    /(难度|内存需求|总耗时|耗时|Difficulty|Memory|Time):\s*(\d+\.?\d*)(MB|秒|s)?/gi,
+    RE_NUM,
     '$1: <span class="log-highlight">$2$3</span>',
   );
 
   // 3. 高亮设备指纹（8位十六进制且前后有明确边界）
   processedMessage = processedMessage.replace(
-    /\b([a-f0-9]{8})\b/g,
+    RE_FP,
     '<span class="log-highlight">$1</span>',
   );
 

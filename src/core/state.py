@@ -5,6 +5,7 @@ import math
 import os
 import secrets
 import time
+from collections import deque
 from typing import Any, Dict, Optional, Set
 
 from argon2 import PasswordHasher, Type
@@ -30,8 +31,7 @@ class SystemState:
         # 时间跟踪
         self.puzzle_start_time = time.time()  # 当前puzzle开始时间（绝对时间）
         self.last_solve_time: Optional[float] = None  # 上次解题耗时
-        self.solve_history: list[float] = []   # 最近N次解题耗时
-        self.solve_history_max: int = 5
+        self.solve_history: deque[float] = deque(maxlen=5)  # 最近5次解题耗时
 
         # 挖矿状态跟踪（只在有矿工挖矿时计时）
         self.active_miners: Set[WebSocket] = set()  # 正在挖矿的矿工连接
@@ -243,8 +243,12 @@ class SystemState:
     def record_solve_time(self, solve_time: float) -> None:
         """记录解题耗时到滑动窗口历史（在原子锁内调用）"""
         self.solve_history.append(solve_time)
-        if len(self.solve_history) > self.solve_history_max:
-            self.solve_history = self.solve_history[-self.solve_history_max:]
+
+    @property
+    def average_solve_time(self) -> Optional[float]:
+        if not self.solve_history:
+            return None
+        return round(sum(self.solve_history) / len(self.solve_history), 2)
 
     async def start_timeout_checker(self):
         """启动超时检查任务"""
@@ -313,6 +317,19 @@ class SystemState:
         except Exception as e:
             logger.error("Timeout checker error: %s", e, exc_info=True)
 
+    async def _broadcast(self, message: str) -> None:
+        """并行广播消息给所有连接的客户端，清理断开的连接"""
+        connections_snapshot = list(self.active_connections)
+        tasks = [conn.send_text(message) for conn in connections_snapshot]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        disconnected = {
+            conn for conn, result in zip(connections_snapshot, results)
+            if isinstance(result, Exception)
+        }
+        self.active_connections -= disconnected
+        if disconnected:
+            logger.debug("Removed %d disconnected connections", len(disconnected))
+
     async def broadcast_puzzle_reset(self):
         """广播 puzzle 重置通知给所有连接的客户端（并行发送）"""
         message = json.dumps(
@@ -321,28 +338,11 @@ class SystemState:
                 "seed": self.current_seed,
                 "difficulty": self.difficulty,
                 "solve_time": round(self.last_solve_time, 2) if self.last_solve_time is not None else None,
-                "average_solve_time": round(sum(self.solve_history) / len(self.solve_history), 2) if self.solve_history else None,
+                "average_solve_time": self.average_solve_time,
                 "puzzle_start_time": self.puzzle_start_time,
             }
         )
-
-        # ===== 关键修复：先将 set 转为 list，避免并发修改导致 zip 不匹配 =====
-        connections_snapshot = list(self.active_connections)
-
-        # 并行发送消息到所有连接
-        tasks = [connection.send_text(message) for connection in connections_snapshot]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # 清理发送失败的连接
-        disconnected = set()
-        for connection, result in zip(connections_snapshot, results):
-            if isinstance(result, Exception):
-                disconnected.add(connection)
-                logger.error(
-                    "Failed to send PUZZLE_RESET to connection: %s", result,
-                )
-
-        self.active_connections -= disconnected
+        await self._broadcast(message)
 
     async def broadcast_network_hashrate(self, stats: Dict[str, float]):
         """广播全网算力统计给所有连接的客户端（并行发送）"""
@@ -354,22 +354,7 @@ class SystemState:
                 "timestamp": time.time(),
             }
         )
-
-        # ===== 关键修复：先将 set 转为 list，避免并发修改导致 zip 不匹配 =====
-        connections_snapshot = list(self.active_connections)
-
-        # 并行发送消息到所有连接
-        tasks = [connection.send_text(message) for connection in connections_snapshot]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # 清理发送失败的连接
-        disconnected = set()
-        for connection, result in zip(connections_snapshot, results):
-            if isinstance(result, Exception):
-                disconnected.add(connection)
-                # 不打印日志，避免刷屏（hashrate 每5秒广播一次）
-
-        self.active_connections -= disconnected
+        await self._broadcast(message)
 
     async def update_client_hashrate(
         self, ws: WebSocket, rate: float, client_ip: str
@@ -381,11 +366,11 @@ class SystemState:
             "ip": client_ip,
         }
 
-    async def remove_client_hashrate(self, ws: WebSocket) -> None:
+    def remove_client_hashrate(self, ws: WebSocket) -> None:
         """客户端断开时移除算力数据"""
         self.client_hashrates.pop(ws, None)
 
-    async def get_network_hashrate(self) -> Dict[str, float]:
+    def get_network_hashrate(self) -> Dict[str, float]:
         """计算全网算力（过滤过时数据）"""
         current_time = time.time()
         active_rates = []
@@ -417,7 +402,7 @@ class SystemState:
             while True:
                 try:
                     await asyncio.sleep(5.0)  # 每5秒
-                    stats = await self.get_network_hashrate()
+                    stats = self.get_network_hashrate()
 
                     logger.debug(
                         "Network hashrate: %.2f H/s | active miners: %d | stale removed: %d",
@@ -682,7 +667,7 @@ class SystemState:
             "is_mining_active": self.is_mining_active,
             "last_solve_time": self.last_solve_time,
             "solve_history": list(self.solve_history),
-            "average_solve_time": round(sum(self.solve_history) / len(self.solve_history), 2) if self.solve_history else None,
+            "average_solve_time": self.average_solve_time,
             "active_miners": len(self.active_miners),
             "active_connections": len(self.active_connections),
             "session_count": len(self.session_tokens),

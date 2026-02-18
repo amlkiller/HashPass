@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import aiofiles
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
 
 from src.core.crypto import generate_invite_code, verify_argon2_solution
@@ -22,6 +23,10 @@ from src.models.schemas import PuzzleResponse, Submission, VerifyResponse
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
+
+
+def _get_real_ip(request_or_ws) -> str:
+    return request_or_ws.headers.get("cf-connecting-ip") or request_or_ws.client.host
 
 
 # ===== Session Token 验证依赖 =====
@@ -62,7 +67,7 @@ async def verify_session_token(
     token = authorization.replace("Bearer ", "", 1)
 
     # 4. 获取请求 IP
-    real_ip = request.headers.get("cf-connecting-ip") or request.client.host
+    real_ip = _get_real_ip(request)
 
     # 5. 验证 Token 有效性和 IP 一致性
     if not state.validate_session_token(token, real_ip):
@@ -91,8 +96,9 @@ async def append_to_verify_log(verify_data: dict) -> None:
 
         # 读取现有记录
         if verify_file.exists():
-            with open(verify_file, "r", encoding="utf-8") as f:
-                records = json.load(f)
+            async with aiofiles.open(verify_file, "r", encoding="utf-8") as f:
+                content = await f.read()
+                records = json.loads(content)
 
         # 检查是否需要轮转（达到 1000 条）
         if len(records) >= 1000:
@@ -101,8 +107,8 @@ async def append_to_verify_log(verify_data: dict) -> None:
             archive_file = Path(f"verify_{timestamp}.json")
 
             # 将旧记录移动到归档文件
-            with open(archive_file, "w", encoding="utf-8") as f:
-                json.dump(records, f, ensure_ascii=False, indent=2)
+            async with aiofiles.open(archive_file, "w", encoding="utf-8") as f:
+                await f.write(json.dumps(records, ensure_ascii=False, indent=2))
 
             logger.info(
                 "Log rotation: archived %d records to %s",
@@ -116,8 +122,8 @@ async def append_to_verify_log(verify_data: dict) -> None:
         records.append(verify_data)
 
         # 写入主文件
-        with open(verify_file, "w", encoding="utf-8") as f:
-            json.dump(records, f, ensure_ascii=False, indent=2)
+        async with aiofiles.open(verify_file, "w", encoding="utf-8") as f:
+            await f.write(json.dumps(records, ensure_ascii=False, indent=2))
 
     except Exception as e:
         logger.error("Failed to write verify.json: %s", e, exc_info=True)
@@ -135,7 +141,7 @@ async def get_puzzle(
     客户端应建立 WebSocket 连接后获取 Token，再调用此端点。
     """
     # 黑名单检查
-    real_ip = request.headers.get("cf-connecting-ip") or request.client.host
+    real_ip = _get_real_ip(request)
     if state.is_banned(real_ip):
         raise HTTPException(status_code=403, detail="Access denied")
 
@@ -148,7 +154,7 @@ async def get_puzzle(
         worker_count=state.worker_count,
         puzzle_start_time=state.puzzle_start_time,
         last_solve_time=state.last_solve_time,
-        average_solve_time=round(sum(state.solve_history) / len(state.solve_history), 2) if state.solve_history else None,
+        average_solve_time=state.average_solve_time,
     )
 
 
@@ -196,10 +202,7 @@ async def verify_solution(
     """
 
     # 1. 获取真实 IP（Cloudflare Header）
-    real_ip = request.headers.get("cf-connecting-ip")
-    if not real_ip:
-        # 本地开发回退
-        real_ip = request.client.host
+    real_ip = _get_real_ip(request)
 
     # 1.1 黑名单检查
     if state.is_banned(real_ip):
@@ -365,7 +368,7 @@ async def websocket_endpoint(websocket: WebSocket):
         return
 
     # 2. 获取客户端 IP
-    real_ip = websocket.headers.get("cf-connecting-ip") or websocket.client.host
+    real_ip = _get_real_ip(websocket)
 
     # 2.1 黑名单检查
     if state.is_banned(real_ip):
@@ -385,7 +388,7 @@ async def websocket_endpoint(websocket: WebSocket):
         if old_ws is not None:
             try:
                 state.active_connections.discard(old_ws)
-                await state.remove_client_hashrate(old_ws)
+                state.remove_client_hashrate(old_ws)
                 state.stop_miner(old_ws)
                 state.unregister_ip_connection(real_ip, old_ws)
                 await old_ws.close(code=1008, reason="Replaced by new connection")
@@ -484,7 +487,7 @@ async def websocket_endpoint(websocket: WebSocket):
         # ===== 关键修复：确保所有退出路径都清理资源 =====
         # 无论是正常断开、异常还是其他情况，都必须清理连接
         state.active_connections.discard(websocket)
-        await state.remove_client_hashrate(websocket)
+        state.remove_client_hashrate(websocket)
         state.stop_miner(websocket)  # 停止挖矿计时
         state.revoke_session_token(websocket)  # 清理 Session Token
         state.unregister_ip_connection(real_ip, websocket)  # 移除 IP 连接映射

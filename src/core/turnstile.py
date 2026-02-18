@@ -8,7 +8,6 @@ import os
 from typing import Optional, Tuple
 
 import httpx
-from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +17,23 @@ SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 # 测试密钥（总是通过）
 TEST_SECRET_KEY = "1x0000000000000000000000000000000AA"
 TEST_SITE_KEY = "1x00000000000000000000AA"
+
+# 持久化 HTTP 客户端（懒惰初始化，复用连接）
+_http_client: Optional[httpx.AsyncClient] = None
+
+
+def get_turnstile_client() -> httpx.AsyncClient:
+    global _http_client
+    if _http_client is None:
+        _http_client = httpx.AsyncClient(timeout=10.0)
+    return _http_client
+
+
+async def close_turnstile_client() -> None:
+    global _http_client
+    if _http_client is not None:
+        await _http_client.aclose()
+        _http_client = None
 
 
 def get_turnstile_config() -> Tuple[str, str, bool]:
@@ -58,9 +74,6 @@ async def verify_turnstile_token(
 
     Returns:
         (is_valid, error_message)
-
-    Raises:
-        HTTPException: 验证失败或网络错误
     """
     if not token:
         return False, "Missing Turnstile token"
@@ -80,11 +93,11 @@ async def verify_turnstile_token(
         payload["remoteip"] = remote_ip
 
     try:
-        # 调用 Cloudflare Siteverify API
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.post(SITEVERIFY_URL, json=payload)
-            response.raise_for_status()
-            result = response.json()
+        # 调用 Cloudflare Siteverify API（复用持久连接）
+        client = get_turnstile_client()
+        response = await client.post(SITEVERIFY_URL, json=payload)
+        response.raise_for_status()
+        result = response.json()
 
         # 检查验证结果
         success = result.get("success", False)
