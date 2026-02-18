@@ -448,6 +448,16 @@ async def websocket_endpoint(websocket: WebSocket):
         logger.info("WebSocket reconnected successfully using existing Session Token")
 
     else:
+        # Session Token 格式：secrets.token_urlsafe(32) 固定 43 字符
+        # Turnstile Token 通常超过 100 字符
+        # 若 token 长度与 Session Token 一致，说明是失效的 Session Token，直接拒绝
+        if len(token) <= 64:
+            logger.warning(
+                "WebSocket rejected: invalid Session Token from IP %s", real_ip
+            )
+            await websocket.close(code=1008, reason="Session token expired or invalid")
+            return
+
         # 首次连接：不允许同 IP 多开
         if state.has_active_connection(real_ip):
             logger.warning("WebSocket rejected: duplicate IP %s", real_ip)
