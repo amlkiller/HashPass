@@ -180,14 +180,19 @@ async function refreshMiners() {
       return;
     }
 
-    tbody.innerHTML = miners.map(m => `
+    tbody.innerHTML = miners.map(m => {
+      const speedLimit = m.overspeed
+        ? `<span style="display:inline-block;padding:0.1rem 0.4rem;border-radius:0.25rem;background:rgba(239,68,68,0.15);color:#ef4444;font-size:0.625rem;font-weight:600;letter-spacing:0.03em;">超速</span>`
+        : "";
+      const hashrateStyle = m.overspeed ? "color:#ef4444;" : "";
+      return `
       <tr>
         <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;">${escapeHtml(m.ip)}</td>
-        <td style="font-family:'JetBrains Mono',monospace;">${m.hashrate.toFixed(2)} H/s</td>
+        <td style="font-family:'JetBrains Mono',monospace;${hashrateStyle}">${m.hashrate.toFixed(2)} H/s ${speedLimit}</td>
         <td>${m.last_seen.toFixed(0)}秒前</td>
         <td style="text-align:center;"><button class="admin-btn danger" style="padding:0.25rem 0.625rem;font-size:0.6875rem;" onclick="banMinerIp('${escapeHtml(m.ip)}')">封禁</button></td>
-      </tr>
-    `).join("");
+      </tr>`;
+    }).join("");
   } catch (_) {}
 }
 

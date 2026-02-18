@@ -535,8 +535,12 @@ async def websocket_endpoint(websocket: WebSocket):
                 # 验证算力值（防止恶意数据）
                 # 上限与 max_nonce_speed 保持一致；未启用限制时不设上限
                 max_rate = state.max_nonce_speed if state.max_nonce_speed > 0 else float("inf")
-                if isinstance(rate, (int, float)) and 0 <= rate < max_rate:
-                    await state.update_client_hashrate(websocket, rate, real_ip)
+                if isinstance(rate, (int, float)) and 0 <= rate:
+                    if rate < max_rate:
+                        await state.update_client_hashrate(websocket, rate, real_ip)
+                    else:
+                        logger.warning("Overspeed hashrate from %s: %.1f H/s (limit: %.1f H/s)", real_ip, rate, max_rate)
+                        await state.update_overspeed_hashrate(websocket, rate, real_ip)
                 else:
                     logger.warning("Invalid hashrate from %s: %s", real_ip, rate)
 

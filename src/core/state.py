@@ -88,6 +88,10 @@ class SystemState:
         # 客户端算力跟踪
         self.client_hashrates: Dict[WebSocket, Dict[str, float]] = {}
         # 结构: {websocket: {"rate": 123.45, "timestamp": 1234567890.123, "ip": "1.2.3.4"}}
+
+        # 超速矿工跟踪（上报算力超过 max_nonce_speed 的矿工）
+        self.overspeed_hashrates: Dict[WebSocket, Dict[str, Any]] = {}
+        # 结构同 client_hashrates，额外含 "reported_rate" 字段（实际上报值）
         self.aggregation_task: Optional[asyncio.Task] = None
         self.hashrate_stale_timeout: float = 10.0  # 10秒无更新视为过时
 
@@ -376,10 +380,23 @@ class SystemState:
             "timestamp": time.time(),
             "ip": client_ip,
         }
+        # 若曾被记为超速，清除（当前报告已合法）
+        self.overspeed_hashrates.pop(ws, None)
+
+    async def update_overspeed_hashrate(
+        self, ws: WebSocket, rate: float, client_ip: str
+    ) -> None:
+        """记录上报算力超过速度限制的矿工"""
+        self.overspeed_hashrates[ws] = {
+            "rate": rate,
+            "timestamp": time.time(),
+            "ip": client_ip,
+        }
 
     def remove_client_hashrate(self, ws: WebSocket) -> None:
         """客户端断开时移除算力数据"""
         self.client_hashrates.pop(ws, None)
+        self.overspeed_hashrates.pop(ws, None)
 
     def get_network_hashrate(self) -> Dict[str, float]:
         """计算全网算力（过滤过时数据）"""
@@ -699,15 +716,36 @@ class SystemState:
         }
 
     def get_miners_info(self) -> list:
-        """从 client_hashrates 提取矿工列表"""
+        """从 client_hashrates 提取矿工列表（含超速矿工）"""
         current_time = time.time()
         miners = []
+        seen_ws = set()
+
         for ws, data in self.client_hashrates.items():
+            age = current_time - data.get("timestamp", current_time)
+            if age > self.hashrate_stale_timeout:
+                continue
+            seen_ws.add(ws)
             miners.append({
                 "ip": data.get("ip", "unknown"),
                 "hashrate": round(data.get("rate", 0), 2),
-                "last_seen": round(current_time - data.get("timestamp", current_time), 1),
+                "last_seen": round(age, 1),
+                "overspeed": False,
             })
+
+        for ws, data in self.overspeed_hashrates.items():
+            if ws in seen_ws:
+                continue  # 已在正常列表（不应发生，防御性检查）
+            age = current_time - data.get("timestamp", current_time)
+            if age > self.hashrate_stale_timeout:
+                continue
+            miners.append({
+                "ip": data.get("ip", "unknown"),
+                "hashrate": round(data.get("rate", 0), 2),
+                "last_seen": round(age, 1),
+                "overspeed": True,
+            })
+
         return miners
 
     def get_sessions_info(self) -> list:
