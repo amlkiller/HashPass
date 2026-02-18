@@ -152,6 +152,36 @@ async def get_puzzle(
     )
 
 
+def check_nonce_speed(nonce: int, solve_time: float) -> tuple[bool, str]:
+    """
+    检查 nonce 计算速度是否超过阈值（nonce / solve_time）
+
+    Args:
+        nonce: 客户端提交的 nonce 值（尝试次数）
+        solve_time: 解题耗时（秒）
+
+    Returns:
+        (True, "") 如果通过检查，(False, 错误信息) 如果超速
+    """
+    max_speed = state.max_nonce_speed
+
+    if max_speed <= 0:
+        return True, ""  # 未配置阈值，禁用检查
+
+    if solve_time <= 0:
+        return True, ""  # 无法计算速度，跳过检查
+
+    speed = nonce / solve_time
+
+    if speed > max_speed:
+        return False, (
+            f"Computation speed too high: {speed:.1f} nonce/s "
+            f"(limit: {max_speed:.1f} nonce/s)"
+        )
+
+    return True, ""
+
+
 @router.post("/verify", response_model=VerifyResponse)
 async def verify_solution(
     sub: Submission,
@@ -199,7 +229,13 @@ async def verify_solution(
         # 4.2 计算解题耗时（只统计有矿工挖矿的时间）
         solve_time = state.get_current_mining_time()
 
-        # 4.3 使用进程池验证哈希解（避免阻塞事件循环）
+        # 4.3 检查计算速度（nonce / solve_time）是否超过阈值
+        speed_ok, speed_error = check_nonce_speed(sub.nonce, solve_time)
+        if not speed_ok:
+            logger.warning("Speed check failed for IP %s: %s", real_ip, speed_error)
+            raise HTTPException(status_code=400, detail=speed_error)
+
+        # 4.4 使用进程池验证哈希解（避免阻塞事件循环）
         loop = asyncio.get_running_loop()
         executor = get_process_pool()
 

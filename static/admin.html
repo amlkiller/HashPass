@@ -248,6 +248,17 @@
                         </div>
                         <button class="admin-btn primary" style="align-self:flex-start;" onclick="applyWorkerCount()">应用</button>
                     </div>
+
+                    <!-- Max Nonce Speed -->
+                    <div class="param-card">
+                        <h3>计算速度限制</h3>
+                        <div class="warning-banner">设置客户端提交时允许的最大计算速度（nonce / 求解时间）。超出阈值的提交将被拒绝。设为 0 可禁用此检查。</div>
+                        <div class="param-row">
+                            <label>最大速度（nonce/s）</label>
+                            <input type="number" class="param-input" id="param-max-nonce-speed" min="0" step="100" placeholder="0 = 禁用" style="width:150px;">
+                        </div>
+                        <button class="admin-btn primary" style="align-self:flex-start;" onclick="applyMaxNonceSpeed()">应用</button>
+                    </div>
                 </div>
             </div>
 

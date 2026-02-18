@@ -17,6 +17,7 @@ from src.models.schemas import (
     AdminDifficultyUpdate,
     AdminHmacUpdate,
     AdminKickRequest,
+    AdminMaxNonceSpeedUpdate,
     AdminTargetTimeUpdate,
     AdminUnbanRequest,
     AdminWorkerCountUpdate,
@@ -293,6 +294,25 @@ async def update_worker_count(
         "worker_count": state.worker_count,
         "new_seed": state.current_seed[:8] + "...",
     }
+
+
+@admin_router.post("/max-nonce-speed")
+async def update_max_nonce_speed(
+    body: AdminMaxNonceSpeedUpdate,
+    _: str = Depends(require_admin),
+):
+    """修改最大 nonce 计算速度限制（0 = 禁用）"""
+    if body.max_nonce_speed < 0:
+        return {"error": "max_nonce_speed must be >= 0"}
+
+    state.max_nonce_speed = body.max_nonce_speed
+
+    if body.max_nonce_speed == 0:
+        logger.info("Max nonce speed limit disabled")
+        return {"max_nonce_speed": 0, "message": "Speed limit disabled"}
+    else:
+        logger.info("Max nonce speed limit set to %.1f nonce/s", state.max_nonce_speed)
+        return {"max_nonce_speed": state.max_nonce_speed}
 
 
 # ===== 手动操作端点 =====

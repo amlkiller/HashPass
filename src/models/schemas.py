@@ -44,6 +44,9 @@ class AdminArgon2Update(BaseModel):
 class AdminWorkerCountUpdate(BaseModel):
     worker_count: int
 
+class AdminMaxNonceSpeedUpdate(BaseModel):
+    max_nonce_speed: float  # nonce/s，0 表示禁用
+
 class AdminHmacUpdate(BaseModel):
     hmac_secret: str  # hex 编码的 HMAC 密钥
 

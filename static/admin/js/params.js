@@ -21,6 +21,7 @@ async function loadCurrentParams() {
     setVal("param-memory-cost", status.argon2_memory_cost);
     setVal("param-parallelism", status.argon2_parallelism);
     setVal("param-worker-count", status.worker_count);
+    setVal("param-max-nonce-speed", status.max_nonce_speed ?? 0);
   } catch (_) {}
 }
 
@@ -32,6 +33,11 @@ function setVal(id, val) {
 function getNum(id) {
   const el = document.getElementById(id);
   return el ? parseInt(el.value, 10) : NaN;
+}
+
+function getFloat(id) {
+  const el = document.getElementById(id);
+  return el ? parseFloat(el.value) : NaN;
 }
 
 // Expose to global for onclick handlers
@@ -86,5 +92,19 @@ window.applyWorkerCount = async function () {
     const res = await api.updateWorkerCount({ worker_count: wc });
     if (res.error) { showToast(res.error, "error"); return; }
     showToast(`Worker 数量: ${res.worker_count}`, "success");
+  } catch (e) { showToast("失败: " + e.message, "error"); }
+};
+
+window.applyMaxNonceSpeed = async function () {
+  try {
+    const speed = getFloat("param-max-nonce-speed");
+    if (isNaN(speed) || speed < 0) { showToast("请输入有效的非负数值", "error"); return; }
+    const res = await api.updateMaxNonceSpeed({ max_nonce_speed: speed });
+    if (res.error) { showToast(res.error, "error"); return; }
+    if (speed === 0) {
+      showToast("速度限制已禁用", "success");
+    } else {
+      showToast(`最大速度: ${res.max_nonce_speed} nonce/s`, "success");
+    }
   } catch (e) { showToast("失败: " + e.message, "error"); }
 };

@@ -37,6 +37,7 @@ export const api = {
   updateTargetTime: (data) => request("/target-time", { method: "POST", body: JSON.stringify(data) }),
   updateArgon2: (data) => request("/argon2", { method: "POST", body: JSON.stringify(data) }),
   updateWorkerCount: (data) => request("/worker-count", { method: "POST", body: JSON.stringify(data) }),
+  updateMaxNonceSpeed: (data) => request("/max-nonce-speed", { method: "POST", body: JSON.stringify(data) }),
 
   resetPuzzle: () => request("/reset-puzzle", { method: "POST" }),
   kickAll: () => request("/kick-all", { method: "POST" }),

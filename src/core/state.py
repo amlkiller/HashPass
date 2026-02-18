@@ -55,6 +55,9 @@ class SystemState:
         # 前端并行 Worker 数量
         self.worker_count = int(os.getenv("HASHPASS_WORKER_COUNT", "1"))
 
+        # 最大允许计算速度（nonce/秒），0 表示禁用检查
+        self.max_nonce_speed = float(os.getenv("HASHPASS_MAX_NONCE_SPEED", "0"))
+
         self.ph = PasswordHasher(
             time_cost=self.argon2_time_cost,
             memory_cost=self.argon2_memory_cost,
@@ -687,6 +690,7 @@ class SystemState:
             "argon2_memory_cost": self.argon2_memory_cost,
             "argon2_parallelism": self.argon2_parallelism,
             "worker_count": self.worker_count,
+            "max_nonce_speed": self.max_nonce_speed,
             "banned_ips_count": len(self.banned_ips),
         }
 
