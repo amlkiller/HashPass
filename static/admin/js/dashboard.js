@@ -12,6 +12,8 @@ const _hashrateData = [];
 const _solveTimeData = [];
 let _hashrateChart = null;
 let _solveTimeChart = null;
+let _chartsInitialized = false;   // 是否已从后端历史预填充
+let _lastAvgSolveTime = null;     // 用于检测平均解题时间是否真的发生了变化
 
 function _makeChartDefaults() {
   return {
@@ -86,6 +88,13 @@ function _pushChartPoint(arr, chart, value) {
   chart.data.datasets[0].data = [...arr];
   chart.update("none");
 }
+
+function _syncChart(arr, chart) {
+  if (!chart) return;
+  chart.data.labels = arr.map((_, i) => i);
+  chart.data.datasets[0].data = [...arr];
+  chart.update("none");
+}
 // ===== end charts =====
 
 export function initDashboard() {
@@ -130,8 +139,34 @@ export function renderDashboardUpdate(data) {
   }
 
   // 更新趋势图
+  // 首次收到状态时，用后端存储的历史数据预填充图表
+  if (!_chartsInitialized) {
+    _chartsInitialized = true;
+    const hrHistory = data.hashrate_chart_history;
+    const stHistory = data.solve_time_chart_history;
+    if (Array.isArray(hrHistory) && hrHistory.length > 0) {
+      _hashrateData.length = 0;
+      hrHistory.forEach(v => _hashrateData.push(v));
+      _syncChart(_hashrateData, _hashrateChart);
+    }
+    if (Array.isArray(stHistory) && stHistory.length > 0) {
+      _solveTimeData.length = 0;
+      stHistory.forEach(v => _solveTimeData.push(v));
+      _syncChart(_solveTimeData, _solveTimeChart);
+    }
+    // 记录当前平均解题时间，避免在下一次更新时重复推入
+    _lastAvgSolveTime = data.average_solve_time ?? null;
+  }
+
+  // 算力图表每次更新都推入（实时数据）
   _pushChartPoint(_hashrateData, _hashrateChart, data.total_hashrate || 0);
-  _pushChartPoint(_solveTimeData, _solveTimeChart, data.average_solve_time || 0);
+
+  // 解题时间图表仅在实际解出题目后才推入（值发生变化时）
+  const currentAvg = data.average_solve_time ?? null;
+  if (currentAvg !== null && currentAvg !== _lastAvgSolveTime) {
+    _pushChartPoint(_solveTimeData, _solveTimeChart, currentAvg);
+    _lastAvgSolveTime = currentAvg;
+  }
 }
 
 async function refreshMiners() {

@@ -100,6 +100,11 @@ class SystemState:
         # IP 黑名单（内存态，重启清空）
         self.banned_ips: Set[str] = set()
 
+        # 管理面板图表历史（内存态，最多 50 点）
+        self.chart_history_max: int = 50
+        self.hashrate_chart_history: list = []   # 全网算力采样（每5秒一次）
+        self.solve_time_chart_history: list = [] # 平均求解用时（每次解题时追加）
+
         # IP -> WebSocket 映射，追踪每个 IP 的活跃连接（限制同 IP 多开）
         self.ip_connections: Dict[str, WebSocket] = {}
 
@@ -243,6 +248,11 @@ class SystemState:
     def record_solve_time(self, solve_time: float) -> None:
         """记录解题耗时到滑动窗口历史（在原子锁内调用）"""
         self.solve_history.append(solve_time)
+        avg = self.average_solve_time
+        if avg is not None:
+            self.solve_time_chart_history.append(avg)
+            if len(self.solve_time_chart_history) > self.chart_history_max:
+                self.solve_time_chart_history.pop(0)
 
     @property
     def average_solve_time(self) -> Optional[float]:
@@ -403,6 +413,11 @@ class SystemState:
                 try:
                     await asyncio.sleep(5.0)  # 每5秒
                     stats = self.get_network_hashrate()
+
+                    # 追加算力历史（供管理面板图表使用）
+                    self.hashrate_chart_history.append(round(stats["total_hashrate"], 2))
+                    if len(self.hashrate_chart_history) > self.chart_history_max:
+                        self.hashrate_chart_history.pop(0)
 
                     logger.debug(
                         "Network hashrate: %.2f H/s | active miners: %d | stale removed: %d",
@@ -677,6 +692,8 @@ class SystemState:
             "worker_count": self.worker_count,
             "max_nonce_speed": self.max_nonce_speed,
             "banned_ips_count": len(self.banned_ips),
+            "hashrate_chart_history": list(self.hashrate_chart_history),
+            "solve_time_chart_history": list(self.solve_time_chart_history),
         }
 
     def get_miners_info(self) -> list:

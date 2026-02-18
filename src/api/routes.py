@@ -7,7 +7,15 @@ from datetime import datetime
 from pathlib import Path
 
 import aiofiles
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    Header,
+    HTTPException,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
 
 from src.core.crypto import generate_invite_code, verify_argon2_solution
 from src.core.executor import get_process_pool
@@ -16,8 +24,8 @@ from src.core.turnstile import (
     get_turnstile_config,
     verify_turnstile_token,
 )
-from src.core.webhook import send_webhook_notification
 from src.core.useragent import validate_user_agent
+from src.core.webhook import send_webhook_notification
 from src.models.schemas import PuzzleResponse, Submission, VerifyResponse
 
 logger = logging.getLogger(__name__)
@@ -31,8 +39,7 @@ def _get_real_ip(request_or_ws) -> str:
 
 # ===== Session Token 验证依赖 =====
 async def verify_session_token(
-    authorization: str = Header(None),
-    request: Request = None
+    authorization: str = Header(None), request: Request = None
 ) -> str:
     """
     验证 Session Token 的 FastAPI 依赖函数
@@ -51,16 +58,13 @@ async def verify_session_token(
     """
     # 1. 检查 Header 是否存在
     if not authorization:
-        raise HTTPException(
-            status_code=401,
-            detail="Missing Authorization header"
-        )
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
 
     # 2. 验证格式
     if not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=401,
-            detail="Invalid Authorization header format (expected 'Bearer <token>')"
+            detail="Invalid Authorization header format (expected 'Bearer <token>')",
         )
 
     # 3. 提取 Token
@@ -71,12 +75,11 @@ async def verify_session_token(
 
     # 5. 验证 Token 有效性和 IP 一致性
     if not state.validate_session_token(token, real_ip):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired session token"
-        )
+        raise HTTPException(status_code=401, detail="Invalid or expired session token")
 
     return token
+
+
 # ===== 依赖函数结束 =====
 
 
@@ -112,7 +115,8 @@ async def append_to_verify_log(verify_data: dict) -> None:
 
             logger.info(
                 "Log rotation: archived %d records to %s",
-                len(records), archive_file.name,
+                len(records),
+                archive_file.name,
             )
 
             # 清空主文件记录
@@ -132,7 +136,7 @@ async def append_to_verify_log(verify_data: dict) -> None:
 @router.get("/puzzle", response_model=PuzzleResponse)
 async def get_puzzle(
     request: Request,
-    token: str = Depends(verify_session_token)  # ← 新增：Token 验证
+    token: str = Depends(verify_session_token),  # ← 新增：Token 验证
 ):
     """
     获取当前谜题
@@ -181,8 +185,7 @@ def check_nonce_speed(nonce: int, solve_time: float) -> tuple[bool, str]:
 
     if speed > max_speed:
         return False, (
-            f"Computation speed too high: {speed:.1f} nonce/s "
-            f"(limit: {max_speed:.1f} nonce/s)"
+            f"Computation speed too high: {speed:.1f} H/s (limit: {max_speed:.1f} H/s)"
         )
 
     return True, ""
@@ -192,7 +195,7 @@ def check_nonce_speed(nonce: int, solve_time: float) -> tuple[bool, str]:
 async def verify_solution(
     sub: Submission,
     request: Request,
-    token: str = Depends(verify_session_token)  # ← 新增：Token 验证
+    token: str = Depends(verify_session_token),  # ← 新增：Token 验证
 ):
     """
     验证哈希解并分发邀请码
@@ -277,7 +280,12 @@ async def verify_solution(
         # 5.2 动态难度调整
         old_difficulty, new_difficulty, reason = state.adjust_difficulty(solve_time)
         state.record_solve_time(solve_time)
-        logger.info("Difficulty adjustment: %s: %d -> %d", reason, old_difficulty, new_difficulty)
+        logger.info(
+            "Difficulty adjustment: %s: %d -> %d",
+            reason,
+            old_difficulty,
+            new_difficulty,
+        )
 
         # 5.3 准备验证数据（在锁内）
         verify_data = {
@@ -362,9 +370,7 @@ async def websocket_endpoint(websocket: WebSocket):
     token = websocket.query_params.get("token")
 
     if not token:
-        await websocket.close(
-            code=1008, reason="Missing token in query parameter"
-        )
+        await websocket.close(code=1008, reason="Missing token in query parameter")
         return
 
     # 2. 获取客户端 IP
@@ -394,7 +400,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 await old_ws.close(code=1008, reason="Replaced by new connection")
             except Exception:
                 pass
-            logger.info("Kicked old connection for IP %s (Session Token reconnect)", real_ip)
+            logger.info(
+                "Kicked old connection for IP %s (Session Token reconnect)", real_ip
+            )
 
         # 接受连接
         await websocket.accept()
@@ -416,10 +424,12 @@ async def websocket_endpoint(websocket: WebSocket):
         is_valid, error_message = await verify_turnstile_token(token, real_ip)
 
         if not is_valid:
-            logger.warning("WebSocket token validation failed for IP %s: %s", real_ip, error_message)
-            await websocket.close(
-                code=1008, reason=error_message or "Invalid token"
+            logger.warning(
+                "WebSocket token validation failed for IP %s: %s",
+                real_ip,
+                error_message,
             )
+            await websocket.close(code=1008, reason=error_message or "Invalid token")
             return
 
         logger.info("WebSocket new connection from IP %s (Turnstile verified)", real_ip)
@@ -431,10 +441,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
         # 生成并下发 Session Token（仅在首次连接时生成新的）
         session_token = state.generate_session_token(websocket, real_ip)
-        await websocket.send_json({
-            "type": "SESSION_TOKEN",
-            "token": session_token
-        })
+        await websocket.send_json({"type": "SESSION_TOKEN", "token": session_token})
         logger.info("Session Token sent to %s", real_ip)
 
     try:
@@ -444,7 +451,9 @@ async def websocket_endpoint(websocket: WebSocket):
 
             # 消息大小限制（防止超大消息占用资源）
             if len(data) > 4096:
-                await websocket.send_text(json.dumps({"type": "ERROR", "detail": "Message too large"}))
+                await websocket.send_text(
+                    json.dumps({"type": "ERROR", "detail": "Message too large"})
+                )
                 await websocket.close(code=1009, reason="Message too large")
                 return
 
