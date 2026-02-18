@@ -50,8 +50,8 @@ def verify_argon2_solution(
         )
         hash_hex = raw_hash.hex()
 
-        # 验证客户端提交的哈希是否正确
-        if hash_hex != submitted_hash:
+        # 验证客户端提交的哈希是否正确（常量时间比较，防止时序攻击）
+        if not hmac.compare_digest(hash_hex, submitted_hash):
             return (False, "Hash mismatch")
 
         # 验证难度（前 N 个比特为 0）

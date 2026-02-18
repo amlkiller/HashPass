@@ -442,6 +442,12 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
 
+            # 消息大小限制（防止超大消息占用资源）
+            if len(data) > 4096:
+                await websocket.send_text(json.dumps({"type": "ERROR", "detail": "Message too large"}))
+                await websocket.close(code=1009, reason="Message too large")
+                return
+
             # 尝试解析 JSON 消息
             try:
                 message_data = json.loads(data)

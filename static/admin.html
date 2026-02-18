@@ -23,6 +23,7 @@
     </script>
     <link rel="stylesheet" href="/static/css/custom.css">
     <link rel="stylesheet" href="/static/admin/css/admin.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body class="font-sans bg-[var(--bg-primary)] text-[var(--text-primary)] leading-relaxed min-h-screen transition-colors duration-300">
 
@@ -80,6 +81,11 @@
                         </svg>
                     </button>
                 </section>
+                <!-- WS Status Indicator -->
+                <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-color)]">
+                    <span id="ws-status-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6b7280;flex-shrink:0;transition:background 0.3s;"></span>
+                    <span id="ws-status-text" style="font-size:0.6875rem;font-weight:500;color:var(--text-tertiary);white-space:nowrap;">断开</span>
+                </div>
                 <button class="admin-btn" onclick="adminLogout()" style="font-size:0.75rem;padding:0.375rem 0.75rem;">登出</button>
             </div>
         </header>
@@ -128,6 +134,21 @@
                     <div class="stat-card">
                         <div class="stat-label">封禁 IP</div>
                         <div class="stat-value" id="stat-banned" style="color:var(--danger,#ef4444);">0</div>
+                    </div>
+                </div>
+
+                <!-- Trend Charts -->
+                <div class="param-card mb-4">
+                    <h3>趋势图</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-2">全网算力（H/s）</div>
+                            <canvas id="chart-hashrate" height="120"></canvas>
+                        </div>
+                        <div>
+                            <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-2">平均求解用时（秒）</div>
+                            <canvas id="chart-solve-time" height="120"></canvas>
+                        </div>
                     </div>
                 </div>
 

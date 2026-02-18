@@ -1,6 +1,7 @@
+import ipaddress
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 
 class PuzzleResponse(BaseModel):
@@ -15,11 +16,11 @@ class PuzzleResponse(BaseModel):
     average_solve_time: Optional[float] = None
 
 class Submission(BaseModel):
-    visitorId: str      # ThumbmarkJS 指纹
-    nonce: int          # 挖矿 nonce
-    submittedSeed: str  # 提交时的 seed
-    traceData: str      # Cloudflare trace 数据
-    hash: str           # 计算出的哈希值
+    visitorId: str = Field(max_length=128)       # ThumbmarkJS 指纹
+    nonce: int = Field(ge=0, le=2**53)           # 挖矿 nonce
+    submittedSeed: str = Field(max_length=128)   # 提交时的 seed
+    traceData: str = Field(max_length=2048)      # Cloudflare trace 数据
+    hash: str = Field(max_length=256)            # 计算出的哈希值
 
 class VerifyResponse(BaseModel):
     invite_code: str
@@ -53,5 +54,23 @@ class AdminHmacUpdate(BaseModel):
 class AdminKickRequest(BaseModel):
     ip: str
 
+    @field_validator("ip")
+    @classmethod
+    def validate_ip(cls, v: str) -> str:
+        try:
+            ipaddress.ip_address(v)
+        except ValueError:
+            raise ValueError(f"Invalid IP address: {v!r}")
+        return v
+
 class AdminUnbanRequest(BaseModel):
     ip: str
+
+    @field_validator("ip")
+    @classmethod
+    def validate_ip(cls, v: str) -> str:
+        try:
+            ipaddress.ip_address(v)
+        except ValueError:
+            raise ValueError(f"Invalid IP address: {v!r}")
+        return v

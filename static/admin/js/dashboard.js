@@ -6,6 +6,88 @@ import { showToast, showConfirm } from "../app.js";
 
 let minersRefreshTimer = null;
 
+// ===== Chart.js trend charts =====
+const MAX_POINTS = 50;
+const _hashrateData = [];
+const _solveTimeData = [];
+let _hashrateChart = null;
+let _solveTimeChart = null;
+
+function _makeChartDefaults() {
+  return {
+    type: "line",
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: "nearest", intersect: false },
+      plugins: { legend: { display: false }, tooltip: { enabled: true } },
+      scales: {
+        x: { display: false },
+        y: {
+          display: true,
+          grid: { color: "rgba(128,128,128,0.15)" },
+          ticks: {
+            color: "rgba(128,128,128,0.8)",
+            font: { size: 10, family: "'JetBrains Mono', monospace" },
+            maxTicksLimit: 5,
+          },
+        },
+      },
+    },
+  };
+}
+
+function _initCharts() {
+  const hrCanvas = document.getElementById("chart-hashrate");
+  const stCanvas = document.getElementById("chart-solve-time");
+  if (!hrCanvas || !stCanvas || typeof Chart === "undefined") return;
+
+  // Destroy existing if re-initialising
+  if (_hashrateChart) { _hashrateChart.destroy(); _hashrateChart = null; }
+  if (_solveTimeChart) { _solveTimeChart.destroy(); _solveTimeChart = null; }
+
+  const hrDef = _makeChartDefaults();
+  hrDef.data = {
+    labels: _hashrateData.map((_, i) => i),
+    datasets: [{
+      data: _hashrateData,
+      borderColor: "#22c55e",
+      backgroundColor: "rgba(34,197,94,0.1)",
+      fill: true,
+      tension: 0.3,
+      pointRadius: 0,
+      borderWidth: 1.5,
+    }],
+  };
+  _hashrateChart = new Chart(hrCanvas, hrDef);
+
+  const stDef = _makeChartDefaults();
+  stDef.data = {
+    labels: _solveTimeData.map((_, i) => i),
+    datasets: [{
+      data: _solveTimeData,
+      borderColor: "#6366f1",
+      backgroundColor: "rgba(99,102,241,0.1)",
+      fill: true,
+      tension: 0.3,
+      pointRadius: 0,
+      borderWidth: 1.5,
+    }],
+  };
+  _solveTimeChart = new Chart(stCanvas, stDef);
+}
+
+function _pushChartPoint(arr, chart, value) {
+  arr.push(value);
+  if (arr.length > MAX_POINTS) arr.shift();
+  if (!chart) return;
+  chart.data.labels = arr.map((_, i) => i);
+  chart.data.datasets[0].data = [...arr];
+  chart.update("none");
+}
+// ===== end charts =====
+
 export function initDashboard() {
   // 首次加载矿工列表和黑名单
   refreshMiners();
@@ -15,6 +97,9 @@ export function initDashboard() {
     refreshMiners();
     refreshBlacklist();
   }, 5000);
+
+  // 初始化趋势图（Chart.js 通过 CDN 同步加载，无需等待）
+  _initCharts();
 }
 
 export function destroyDashboard() {
@@ -43,6 +128,10 @@ export function renderDashboardUpdate(data) {
   if (statusEl) {
     statusEl.style.color = data.is_mining_active ? "var(--success)" : "var(--text-tertiary)";
   }
+
+  // 更新趋势图
+  _pushChartPoint(_hashrateData, _hashrateChart, data.total_hashrate || 0);
+  _pushChartPoint(_solveTimeData, _solveTimeChart, data.average_solve_time || 0);
 }
 
 async function refreshMiners() {
