@@ -375,10 +375,13 @@ class SystemState:
         self, ws: WebSocket, rate: float, client_ip: str
     ) -> None:
         """更新客户端算力数据"""
+        existing = self.client_hashrates.get(ws) or self.overspeed_hashrates.get(ws)
+        connected_at = existing["connected_at"] if existing else time.time()
         self.client_hashrates[ws] = {
             "rate": rate,
             "timestamp": time.time(),
             "ip": client_ip,
+            "connected_at": connected_at,
         }
         # 若曾被记为超速，清除（当前报告已合法）
         self.overspeed_hashrates.pop(ws, None)
@@ -387,10 +390,13 @@ class SystemState:
         self, ws: WebSocket, rate: float, client_ip: str
     ) -> None:
         """记录上报算力超过速度限制的矿工"""
+        existing = self.client_hashrates.get(ws) or self.overspeed_hashrates.get(ws)
+        connected_at = existing["connected_at"] if existing else time.time()
         self.overspeed_hashrates[ws] = {
             "rate": rate,
             "timestamp": time.time(),
             "ip": client_ip,
+            "connected_at": connected_at,
         }
 
     def remove_client_hashrate(self, ws: WebSocket) -> None:
@@ -730,6 +736,7 @@ class SystemState:
                 "ip": data.get("ip", "unknown"),
                 "hashrate": round(data.get("rate", 0), 2),
                 "last_seen": round(age, 1),
+                "connected_since": round(current_time - data.get("connected_at", current_time)),
                 "overspeed": False,
             })
 
@@ -743,6 +750,7 @@ class SystemState:
                 "ip": data.get("ip", "unknown"),
                 "hashrate": round(data.get("rate", 0), 2),
                 "last_seen": round(age, 1),
+                "connected_since": round(current_time - data.get("connected_at", current_time)),
                 "overspeed": True,
             })
 

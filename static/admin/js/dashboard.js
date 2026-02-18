@@ -176,7 +176,7 @@ async function refreshMiners() {
     if (!tbody) return;
 
     if (miners.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">暂无活跃矿工</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">暂无活跃矿工</td></tr>`;
       return;
     }
 
@@ -189,6 +189,7 @@ async function refreshMiners() {
       <tr>
         <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;">${escapeHtml(m.ip)}</td>
         <td style="font-family:'JetBrains Mono',monospace;${hashrateStyle}">${m.hashrate.toFixed(2)} H/s ${speedLimit}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;">${formatUptime(m.connected_since ?? 0)}</td>
         <td>${m.last_seen.toFixed(0)}秒前</td>
         <td style="text-align:center;"><button class="admin-btn danger" style="padding:0.25rem 0.625rem;font-size:0.6875rem;" onclick="banMinerIp('${escapeHtml(m.ip)}')">封禁</button></td>
       </tr>`;
@@ -219,6 +220,16 @@ async function refreshBlacklist() {
 function setText(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = val;
+}
+
+function formatUptime(seconds) {
+  if (seconds < 60) return `${seconds}秒`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m < 60) return `${m}分${s > 0 ? s + "秒" : ""}`;
+  const h = Math.floor(m / 60);
+  const rm = m % 60;
+  return `${h}时${rm > 0 ? rm + "分" : ""}`;
 }
 
 function formatTime(seconds) {
