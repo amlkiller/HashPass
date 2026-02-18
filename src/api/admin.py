@@ -374,6 +374,7 @@ async def kick_ip(
 
     # 0. 将 IP 加入黑名单（持久封禁，直到手动解封或重启）
     state.ban_ip(target_ip)
+    await state.save_blacklist()
 
     # 1. 吊销该 IP 的所有 Token（阻止前端重连时通过 validate 校验）
     revoked = state.revoke_tokens_by_ip(target_ip)
@@ -408,6 +409,7 @@ async def unban_ip(
     """解除指定 IP 的封禁"""
     removed = state.unban_ip(body.ip)
     if removed:
+        await state.save_blacklist()
         logger.info("Unbanned IP %s", body.ip)
         return {"message": f"Unbanned IP {body.ip}"}
     return {"message": f"IP {body.ip} was not in blacklist"}

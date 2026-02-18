@@ -97,6 +97,9 @@ async def lifespan(app: FastAPI):
     # 初始化进程池
     init_process_pool()
 
+    # 加载持久化黑名单
+    state.load_blacklist()
+
     logger.info("Starting timeout checker...")
     await state.start_timeout_checker()
     logger.info("Starting hashrate aggregation...")

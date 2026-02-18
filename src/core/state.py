@@ -6,7 +6,10 @@ import os
 import secrets
 import time
 from collections import deque
+from pathlib import Path
 from typing import Any, Dict, Optional, Set
+
+import aiofiles
 
 from argon2 import PasswordHasher, Type
 from fastapi import WebSocket
@@ -97,7 +100,7 @@ class SystemState:
         # Admin WebSocket 连接集合
         self.admin_connections: Set[WebSocket] = set()
 
-        # IP 黑名单（内存态，重启清空）
+        # IP 黑名单（持久化到 blacklist.json）
         self.banned_ips: Set[str] = set()
 
         # 管理面板图表历史（内存态，最多 50 点）
@@ -743,6 +746,28 @@ class SystemState:
     def get_banned_ips(self) -> list[str]:
         """返回黑名单中所有 IP"""
         return sorted(self.banned_ips)
+
+    def load_blacklist(self, path: str = "blacklist.json") -> None:
+        """从文件加载黑名单（启动时调用）"""
+        p = Path(path)
+        if not p.exists():
+            return
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+            if isinstance(data, list):
+                self.banned_ips = set(data)
+                logger.info("Loaded %d banned IPs from %s", len(self.banned_ips), path)
+        except Exception as e:
+            logger.error("Failed to load blacklist from %s: %s", path, e)
+
+    async def save_blacklist(self, path: str = "blacklist.json") -> None:
+        """异步将黑名单持久化到文件"""
+        try:
+            content = json.dumps(sorted(self.banned_ips), indent=2, ensure_ascii=False)
+            async with aiofiles.open(path, "w", encoding="utf-8") as f:
+                await f.write(content)
+        except Exception as e:
+            logger.error("Failed to save blacklist to %s: %s", path, e)
 
     def has_active_connection(self, ip: str) -> bool:
         """检查该 IP 是否已有活跃 WebSocket 连接"""
