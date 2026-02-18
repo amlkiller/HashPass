@@ -9,7 +9,7 @@ def verify_argon2_solution(
     nonce: int,
     seed: str,
     visitor_id: str,
-    trace_data: str,
+    ip: str,
     submitted_hash: str,
     difficulty: int,
     time_cost: int,
@@ -23,7 +23,7 @@ def verify_argon2_solution(
         nonce: 挖矿随机数
         seed: 谜题种子
         visitor_id: 设备指纹
-        trace_data: Cloudflare Trace 数据
+        ip: 客户端 IP 地址
         submitted_hash: 客户端提交的哈希值
         difficulty: 难度（前导零比特数）
         time_cost: Argon2 时间成本参数
@@ -35,7 +35,7 @@ def verify_argon2_solution(
     """
 
     # 重建 Salt（必须与前端一致）
-    salt_raw = (seed + visitor_id + trace_data).encode("utf-8")
+    salt_raw = f"{seed}|{visitor_id}|{ip}".encode("utf-8")
 
     # 重新计算哈希（使用与配置一致的参数）
     try:

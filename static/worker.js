@@ -36,7 +36,7 @@ self.onmessage = async function (e) {
 async function startMining({
   seed,
   visitorId,
-  traceData,
+  ip,
   difficulty,
   memoryCost,
   timeCost,
@@ -45,7 +45,7 @@ async function startMining({
   workerCount = 1,
 }) {
   let nonce = workerId; // 起始 nonce = workerId
-  const saltString = seed + visitorId + traceData;
+  const saltString = seed + "|" + visitorId + "|" + ip;
   const salt = new TextEncoder().encode(saltString);
 
   const WINDOW_SIZE = 10; // 滑动窗口大小（保留最近 N 次哈希的时间戳）

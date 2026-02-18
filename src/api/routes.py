@@ -278,7 +278,7 @@ async def verify_solution(
             sub.nonce,
             sub.submittedSeed,
             sub.visitorId,
-            sub.traceData,
+            real_ip,
             sub.hash,
             state.difficulty,
             state.argon2_time_cost,
