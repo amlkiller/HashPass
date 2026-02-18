@@ -114,6 +114,14 @@
                         <div class="stat-value success" id="stat-hashrate">--</div>
                     </div>
                     <div class="stat-card">
+                        <div class="stat-label">上次求解用时</div>
+                        <div class="stat-value" id="stat-last-solve" style="color:var(--accent);">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">平均求解用时</div>
+                        <div class="stat-value" id="stat-avg-solve" style="color:var(--accent);">--</div>
+                    </div>
+                    <div class="stat-card">
                         <div class="stat-label">难度</div>
                         <div class="stat-value warning" id="stat-difficulty">--</div>
                     </div>
@@ -134,10 +142,6 @@
                         <div>
                             <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-1">挖矿时间</div>
                             <div class="font-mono text-xs text-[var(--text-secondary)]" id="info-mining-time">--:--:--</div>
-                        </div>
-                        <div>
-                            <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-1">上次求解</div>
-                            <div class="font-mono text-xs text-[var(--text-secondary)]" id="info-last-solve">--</div>
                         </div>
                         <div>
                             <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-1">状态</div>

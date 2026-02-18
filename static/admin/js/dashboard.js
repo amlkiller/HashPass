@@ -29,13 +29,14 @@ export function renderDashboardUpdate(data) {
   setText("stat-miners", data.active_miners ?? "--");
   setText("stat-connections", data.active_connections ?? "--");
   setText("stat-hashrate", formatHR(data.total_hashrate || 0));
+  setText("stat-last-solve", data.last_solve_time != null ? `${data.last_solve_time.toFixed(1)}s` : "--");
+  setText("stat-avg-solve", data.average_solve_time != null ? `${data.average_solve_time.toFixed(1)}s` : "--");
   setText("stat-difficulty", data.difficulty ?? "--");
   setText("stat-banned", data.banned_ips_count ?? "0");
 
   // 谜题信息
   setText("info-seed", (data.current_seed || "").slice(0, 16) + "...");
   setText("info-mining-time", formatTime(data.mining_time || 0));
-  setText("info-last-solve", data.last_solve_time != null ? `${data.last_solve_time.toFixed(1)}s` : "--");
   setText("info-mining-status", data.is_mining_active ? "挖矿中" : "空闲");
 
   const statusEl = document.getElementById("info-mining-status");
