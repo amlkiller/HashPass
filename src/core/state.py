@@ -248,11 +248,9 @@ class SystemState:
     def record_solve_time(self, solve_time: float) -> None:
         """记录解题耗时到滑动窗口历史（在原子锁内调用）"""
         self.solve_history.append(solve_time)
-        avg = self.average_solve_time
-        if avg is not None:
-            self.solve_time_chart_history.append(avg)
-            if len(self.solve_time_chart_history) > self.chart_history_max:
-                self.solve_time_chart_history.pop(0)
+        self.solve_time_chart_history.append(solve_time)
+        if len(self.solve_time_chart_history) > self.chart_history_max:
+            self.solve_time_chart_history.pop(0)
 
     @property
     def average_solve_time(self) -> Optional[float]:

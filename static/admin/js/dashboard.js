@@ -13,7 +13,7 @@ const _solveTimeData = [];
 let _hashrateChart = null;
 let _solveTimeChart = null;
 let _chartsInitialized = false;   // 是否已从后端历史预填充
-let _lastAvgSolveTime = null;     // 用于检测平均解题时间是否真的发生了变化
+let _lastSolveTime = null;         // 用于检测上次解题时间是否真的发生了变化
 
 function _makeChartDefaults() {
   return {
@@ -154,18 +154,18 @@ export function renderDashboardUpdate(data) {
       stHistory.forEach(v => _solveTimeData.push(v));
       _syncChart(_solveTimeData, _solveTimeChart);
     }
-    // 记录当前平均解题时间，避免在下一次更新时重复推入
-    _lastAvgSolveTime = data.average_solve_time ?? null;
+    // 记录当前上次解题时间，避免在下一次更新时重复推入
+    _lastSolveTime = data.last_solve_time ?? null;
   }
 
   // 算力图表每次更新都推入（实时数据）
   _pushChartPoint(_hashrateData, _hashrateChart, data.total_hashrate || 0);
 
   // 解题时间图表仅在实际解出题目后才推入（值发生变化时）
-  const currentAvg = data.average_solve_time ?? null;
-  if (currentAvg !== null && currentAvg !== _lastAvgSolveTime) {
-    _pushChartPoint(_solveTimeData, _solveTimeChart, currentAvg);
-    _lastAvgSolveTime = currentAvg;
+  const currentLastSolve = data.last_solve_time ?? null;
+  if (currentLastSolve !== null && currentLastSolve !== _lastSolveTime) {
+    _pushChartPoint(_solveTimeData, _solveTimeChart, currentLastSolve);
+    _lastSolveTime = currentLastSolve;
   }
 }
 
