@@ -49,13 +49,11 @@ class LockedTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
                     self._release_lock()
             else:
                 # stream 未初始化，尝试重新打开文件
-                import sys
                 print(f"WARNING: Log stream not initialized, attempting to reopen", file=sys.stderr)
                 # 调用父类 emit，它会尝试打开文件
                 logging.handlers.TimedRotatingFileHandler.emit(self, record)
         except Exception as e:
             # 记录错误到 stderr
-            import sys
             print(f"ERROR: Failed to emit log record: {e}", file=sys.stderr)
             self.handleError(record)
 
@@ -71,7 +69,6 @@ class LockedTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
                     fcntl.flock(self.stream.fileno(), fcntl.LOCK_EX)
             except (OSError, IOError) as e:
                 # 文件锁获取失败时记录到 stderr（避免日志系统崩溃）
-                import sys
                 print(f"WARNING: Failed to acquire file lock: {e}", file=sys.stderr)
 
     def _release_lock(self):
@@ -86,7 +83,6 @@ class LockedTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
                     fcntl.flock(self.stream.fileno(), fcntl.LOCK_UN)
             except (OSError, IOError) as e:
                 # 文件锁释放失败时记录到 stderr
-                import sys
                 print(f"WARNING: Failed to release file lock: {e}", file=sys.stderr)
 
 
