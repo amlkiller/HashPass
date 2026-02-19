@@ -17,3 +17,5 @@ verify.json
 verify_*.json
 
 .claude
+
+log/
