@@ -28,13 +28,18 @@ class SystemState:
         self.difficulty = int(os.getenv("HASHPASS_DIFFICULTY", "12"))
         self.min_difficulty = int(os.getenv("HASHPASS_MIN_DIFFICULTY", "4"))
         self.max_difficulty = int(os.getenv("HASHPASS_MAX_DIFFICULTY", "24"))
-        self.target_time_min = int(os.getenv("HASHPASS_TARGET_TIME_MIN", "30"))
-        self.target_time_max = int(os.getenv("HASHPASS_TARGET_TIME_MAX", "120"))
+        self.difficulty_float: float = float(self.difficulty)
+        self.target_time = int(os.getenv("HASHPASS_TARGET_TIME", "75"))
+        self.target_timeout = int(os.getenv("HASHPASS_TARGET_TIMEOUT", "120"))
 
         # 时间跟踪
         self.puzzle_start_time = time.time()  # 当前puzzle开始时间（绝对时间）
         self.last_solve_time: Optional[float] = None  # 上次解题耗时
         self.solve_history: deque[float] = deque(maxlen=5)  # 最近5次解题耗时
+
+        # EMA 平滑系数（N=5）
+        self.ema_alpha: float = 2.0 / (5 + 1)
+        self.ema_solve_time: Optional[float] = None
 
         # 挖矿状态跟踪（只在有矿工挖矿时计时）
         self.active_miners: Set[WebSocket] = set()  # 正在挖矿的矿工连接
@@ -115,6 +120,32 @@ class SystemState:
         # IP -> WebSocket 映射，追踪每个 IP 的活跃连接（限制同 IP 多开）
         self.ip_connections: Dict[str, WebSocket] = {}
 
+        self._load_ema_from_history()
+
+    def _load_ema_from_history(self, path: str = "verify.json") -> None:
+        """从 verify.json 读取最近 N 条历史，计算初始 EMA。"""
+        try:
+            p = Path(path)
+            if not p.exists():
+                return
+            data = json.loads(p.read_text(encoding="utf-8"))
+            if not isinstance(data, list) or not data:
+                return
+            N = round(2.0 / self.ema_alpha) - 1   # = 5
+            times = [
+                r["solve_time"] for r in data[-N:]
+                if isinstance(r.get("solve_time"), (int, float)) and r["solve_time"] > 0
+            ]
+            if not times:
+                return
+            ema = times[0]
+            for t in times[1:]:
+                ema = self.ema_alpha * t + (1 - self.ema_alpha) * ema
+            self.ema_solve_time = ema
+            logger.info("EMA solve time initialized: %.1fs (%d records)", ema, len(times))
+        except Exception as e:
+            logger.warning("Failed to load EMA from history: %s", e)
+
     def reset_puzzle(self):
         """重置谜题（获胜后调用）"""
         self.current_seed = secrets.token_hex(16)
@@ -175,43 +206,19 @@ class SystemState:
             # 当前暂停中，返回累计时间
             return self.total_mining_time
 
-    def _calculate_difficulty_step(self, solve_time: float) -> int:
+    def _calculate_smooth_adjustment(self, effective_time: float) -> float:
         """
-        根据解题时间与目标中位时间的偏离比例，计算难度调整步数。
-
-        使用 log2(target_midpoint / solve_time) 将时间偏离直接映射为 bit 数变化：
-        - 解题时间是目标的 1/2 → +1 bit
-        - 解题时间是目标的 1/4 → +2 bit
-        - 解题时间是目标的 1/8 → +3 bit
-        - 解题时间是目标的 2x  → -1 bit
-        - 解题时间是目标的 4x  → -2 bit
-
-        Returns:
-            正数表示应增加难度，负数表示应降低难度，0 表示不调整
+        平滑比例控制：step = log2(target_time / effective_time)
+        - 无死区、无 floor 离散化
+        - 限幅到 [-4.0, +4.0]
         """
-        target_midpoint = (self.target_time_min + self.target_time_max) / 2
-
-        if solve_time < self.target_time_min:
-            # 解题太快 → 正向调整（增加难度）
-            # solve_time 越小，ratio 越大，step 越大
-            ratio = target_midpoint / max(solve_time, 0.1)  # 防止除零
-            step = math.floor(math.log2(ratio))
-            return max(1, min(step, 4))  # clamp 到 [1, 4]
-
-        elif solve_time > self.target_time_max:
-            # 解题太慢 → 负向调整（降低难度）
-            ratio = solve_time / target_midpoint
-            step = math.floor(math.log2(ratio))
-            return -max(1, min(step, 4))  # clamp 到 [-4, -1]
-
-        else:
-            return 0  # 在目标区间内，不调整
+        ratio = self.target_time / max(effective_time, 0.1)
+        step = math.log2(ratio)
+        return max(-4.0, min(step, 4.0))
 
     def adjust_difficulty(self, solve_time: float) -> tuple[int, int, str]:
         """
-        根据解题时间调整难度（比例步进算法）
-
-        偏离目标时间越大，调整步数越大（±1~4 bit），实现快速收敛。
+        根据 EMA 解题时间调整难度（平滑比例控制 + 浮点累积）
 
         Args:
             solve_time: 解题耗时（秒）
@@ -220,34 +227,43 @@ class SystemState:
             (old_difficulty, new_difficulty, reason)
         """
         old_difficulty = self.difficulty
-        step = self._calculate_difficulty_step(solve_time)
 
-        if step > 0:
-            # 增加难度
-            new_diff = min(self.difficulty + step, self.max_difficulty)
-            actual_step = new_diff - self.difficulty
-            if actual_step > 0:
-                self.difficulty = new_diff
-                reason = (
-                    f"Solved too fast ({solve_time:.1f}s < {self.target_time_min}s), "
-                    f"+{actual_step} bit(s)"
-                )
-            else:
-                reason = f"Already at max difficulty ({self.max_difficulty})"
-        elif step < 0:
-            # 降低难度
-            new_diff = max(self.difficulty + step, self.min_difficulty)
-            actual_step = self.difficulty - new_diff
-            if actual_step > 0:
-                self.difficulty = new_diff
-                reason = (
-                    f"Solved too slow ({solve_time:.1f}s > {self.target_time_max}s), "
-                    f"-{actual_step} bit(s)"
-                )
-            else:
-                reason = f"Already at min difficulty ({self.min_difficulty})"
+        # 更新 EMA
+        if self.ema_solve_time is None:
+            self.ema_solve_time = solve_time
         else:
-            reason = f"Perfect timing ({solve_time:.1f}s within {self.target_time_min}-{self.target_time_max}s)"
+            self.ema_solve_time = (
+                self.ema_alpha * solve_time + (1 - self.ema_alpha) * self.ema_solve_time
+            )
+
+        # 用 EMA 计算连续步长
+        step = self._calculate_smooth_adjustment(self.ema_solve_time)
+
+        # 累加到浮点难度并 clamp
+        new_float = max(
+            float(self.min_difficulty),
+            min(self.difficulty_float + step, float(self.max_difficulty)),
+        )
+        self.difficulty_float = new_float
+        new_difficulty = round(new_float)
+        self.difficulty = new_difficulty
+
+        change = new_difficulty - old_difficulty
+        if change > 0:
+            reason = (
+                f"EMA={self.ema_solve_time:.1f}s raw={solve_time:.1f}s target={self.target_time}s, "
+                f"+{change} bit(s) | step={step:+.3f} float={new_float:.3f}"
+            )
+        elif change < 0:
+            reason = (
+                f"EMA={self.ema_solve_time:.1f}s raw={solve_time:.1f}s target={self.target_time}s, "
+                f"{change} bit(s) | step={step:+.3f} float={new_float:.3f}"
+            )
+        else:
+            reason = (
+                f"EMA={self.ema_solve_time:.1f}s raw={solve_time:.1f}s target={self.target_time}s, "
+                f"no bit change | step={step:+.3f} float={new_float:.3f}"
+            )
 
         self.last_solve_time = solve_time
         return old_difficulty, self.difficulty, reason
@@ -275,7 +291,7 @@ class SystemState:
     async def _check_timeout(self):
         """
         检查puzzle是否超时，超时则降低难度并重置
-        只在有矿工挖矿时计时（挖矿时间累计达到target_time_max才超时）
+        只在有矿工挖矿时计时（挖矿时间累计达到target_timeout才超时）
         """
         try:
             check_interval = 5.0  # 每5秒检查一次
@@ -287,27 +303,35 @@ class SystemState:
                 mining_time = self.get_current_mining_time()
 
                 # 检查是否超时（只看挖矿时间）
-                if mining_time >= self.target_time_max:
+                if mining_time >= self.target_timeout:
                     # 进入锁检查是否仍然是同一个puzzle
                     async with self.lock:
                         # 二次确认超时（防止在等待锁期间puzzle已被解出）
                         mining_time = self.get_current_mining_time()
 
-                        if mining_time >= self.target_time_max:
+                        if mining_time >= self.target_timeout:
                             old_difficulty = self.difficulty
 
-                            # 使用比例步进降低难度（超时场景最少降2 bit，更积极地收敛）
-                            step = self._calculate_difficulty_step(mining_time)
-                            # step 应该是负数（超时意味着太慢），但超时比普通慢更严重
-                            timeout_step = min(step, -2)  # 至少降 2 bit
-                            new_diff = max(self.difficulty + timeout_step, self.min_difficulty)
+                            # 超时步长（至少降 2.0）
+                            step = self._calculate_smooth_adjustment(mining_time)
+                            timeout_step = min(step, -2.0)
+
+                            new_float = max(
+                                float(self.min_difficulty),
+                                min(self.difficulty_float + timeout_step, float(self.max_difficulty)),
+                            )
+                            self.difficulty_float = new_float
+                            new_diff = round(new_float)
                             actual_step = self.difficulty - new_diff
 
                             if actual_step > 0:
                                 self.difficulty = new_diff
-                                reason = f"Timeout (mining time: {mining_time:.1f}s > {self.target_time_max}s) - auto reducing by {actual_step} bit(s)"
+                                reason = (
+                                    f"Timeout ({mining_time:.1f}s >= {self.target_timeout}s), "
+                                    f"-{actual_step} bit(s) | step={timeout_step:+.3f} float={new_float:.3f}"
+                                )
                             else:
-                                reason = f"Timeout (mining time: {mining_time:.1f}s) but already at min difficulty"
+                                reason = f"Timeout ({mining_time:.1f}s) but already at min difficulty"
 
                             logger.info(
                                 "Difficulty adjustment: %s: %d -> %d",
@@ -697,10 +721,12 @@ class SystemState:
         """返回可序列化的全量系统状态快照"""
         return {
             "difficulty": self.difficulty,
+            "difficulty_float": round(self.difficulty_float, 3),
             "min_difficulty": self.min_difficulty,
             "max_difficulty": self.max_difficulty,
-            "target_time_min": self.target_time_min,
-            "target_time_max": self.target_time_max,
+            "target_time": self.target_time,
+            "target_timeout": self.target_timeout,
+            "ema_solve_time": round(self.ema_solve_time, 2) if self.ema_solve_time is not None else None,
             "current_seed": self.current_seed,
             "puzzle_start_time": self.puzzle_start_time,
             "mining_time": round(self.get_current_mining_time(), 2),

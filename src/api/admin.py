@@ -177,6 +177,7 @@ async def update_difficulty(
         if body.difficulty < state.min_difficulty or body.difficulty > state.max_difficulty:
             return {"error": f"difficulty must be between {state.min_difficulty} and {state.max_difficulty}"}
         state.difficulty = body.difficulty
+        state.difficulty_float = float(body.difficulty)
 
     # 修改参数后立刻重置题目
     async with state.lock:
@@ -202,18 +203,18 @@ async def update_target_time(
     _: str = Depends(require_admin),
 ):
     """修改目标时间"""
-    if body.target_time_min is not None:
-        if body.target_time_min < 1:
-            return {"error": "target_time_min must be >= 1"}
-        state.target_time_min = body.target_time_min
+    if body.target_time is not None:
+        if body.target_time < 1:
+            return {"error": "target_time must be >= 1"}
+        state.target_time = body.target_time
 
-    if body.target_time_max is not None:
-        if body.target_time_max < 1:
-            return {"error": "target_time_max must be >= 1"}
-        state.target_time_max = body.target_time_max
+    if body.target_timeout is not None:
+        if body.target_timeout < 1:
+            return {"error": "target_timeout must be >= 1"}
+        state.target_timeout = body.target_timeout
 
-    if state.target_time_min > state.target_time_max:
-        state.target_time_min, state.target_time_max = state.target_time_max, state.target_time_min
+    if state.target_timeout <= state.target_time:
+        state.target_time, state.target_timeout = state.target_timeout, state.target_time
 
     # 修改参数后立刻重置题目
     async with state.lock:
@@ -222,12 +223,12 @@ async def update_target_time(
         await state.start_timeout_checker()
 
     logger.info(
-        "Target time updated: %d-%ds - puzzle reset",
-        state.target_time_min, state.target_time_max,
+        "Target time updated: target=%ds timeout=%ds - puzzle reset",
+        state.target_time, state.target_timeout,
     )
     return {
-        "target_time_min": state.target_time_min,
-        "target_time_max": state.target_time_max,
+        "target_time": state.target_time,
+        "target_timeout": state.target_timeout,
         "new_seed": state.current_seed[:8] + "...",
     }
 

@@ -38,8 +38,8 @@ class AdminDifficultyUpdate(BaseModel):
     max_difficulty: Optional[int] = None
 
 class AdminTargetTimeUpdate(BaseModel):
-    target_time_min: Optional[int] = None
-    target_time_max: Optional[int] = None
+    target_time: Optional[int] = None
+    target_timeout: Optional[int] = None
 
 class AdminArgon2Update(BaseModel):
     time_cost: Optional[int] = None

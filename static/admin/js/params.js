@@ -15,8 +15,8 @@ async function loadCurrentParams() {
     setVal("param-difficulty", status.difficulty);
     setVal("param-min-difficulty", status.min_difficulty);
     setVal("param-max-difficulty", status.max_difficulty);
-    setVal("param-target-min", status.target_time_min);
-    setVal("param-target-max", status.target_time_max);
+    setVal("param-target-time", status.target_time);
+    setVal("param-target-timeout", status.target_timeout);
     setVal("param-time-cost", status.argon2_time_cost);
     setVal("param-memory-cost", status.argon2_memory_cost);
     setVal("param-parallelism", status.argon2_parallelism);
@@ -60,13 +60,13 @@ window.applyDifficulty = async function () {
 window.applyTargetTime = async function () {
   try {
     const data = {};
-    const min = getNum("param-target-min");
-    const max = getNum("param-target-max");
-    if (!isNaN(min)) data.target_time_min = min;
-    if (!isNaN(max)) data.target_time_max = max;
+    const t = getNum("param-target-time");
+    const to = getNum("param-target-timeout");
+    if (!isNaN(t)) data.target_time = t;
+    if (!isNaN(to)) data.target_timeout = to;
     const res = await api.updateTargetTime(data);
     if (res.error) { showToast(res.error, "error"); return; }
-    showToast(`目标时间: ${res.target_time_min}-${res.target_time_max}秒`, "success");
+    showToast(`目标时间: ${res.target_time}s, 超时: ${res.target_timeout}s`, "success");
   } catch (e) { showToast("失败: " + e.message, "error"); }
 };
 

@@ -108,7 +108,9 @@ async def lifespan(app: FastAPI):
     await state.start_token_cleanup()
     logger.info("Initial difficulty: %d", state.difficulty)
     logger.info(
-        "Target time range: %d-%ds", state.target_time_min, state.target_time_max
+        "Target time: %ds, timeout: %ds | EMA: %s",
+        state.target_time, state.target_timeout,
+        f"{state.ema_solve_time:.1f}s" if state.ema_solve_time else "N/A (no history)",
     )
 
     # 验证 Turnstile 配置
