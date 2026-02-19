@@ -42,10 +42,21 @@ class LockedTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
                 try:
                     # 调用父类的 emit 方法写入日志
                     logging.handlers.TimedRotatingFileHandler.emit(self, record)
+                    # 确保立即刷新到磁盘
+                    self.flush()
                 finally:
                     # 释放文件锁
                     self._release_lock()
-        except Exception:
+            else:
+                # stream 未初始化，尝试重新打开文件
+                import sys
+                print(f"WARNING: Log stream not initialized, attempting to reopen", file=sys.stderr)
+                # 调用父类 emit，它会尝试打开文件
+                logging.handlers.TimedRotatingFileHandler.emit(self, record)
+        except Exception as e:
+            # 记录错误到 stderr
+            import sys
+            print(f"ERROR: Failed to emit log record: {e}", file=sys.stderr)
             self.handleError(record)
 
     def _acquire_lock(self):
@@ -58,9 +69,10 @@ class LockedTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
                 else:
                     # Unix/Linux/macOS: 使用 fcntl 独占锁
                     fcntl.flock(self.stream.fileno(), fcntl.LOCK_EX)
-            except (OSError, IOError):
-                # 文件锁获取失败时静默处理（避免日志系统崩溃）
-                pass
+            except (OSError, IOError) as e:
+                # 文件锁获取失败时记录到 stderr（避免日志系统崩溃）
+                import sys
+                print(f"WARNING: Failed to acquire file lock: {e}", file=sys.stderr)
 
     def _release_lock(self):
         """释放文件锁"""
@@ -72,9 +84,10 @@ class LockedTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
                 else:
                     # Unix/Linux/macOS: 释放 fcntl 锁
                     fcntl.flock(self.stream.fileno(), fcntl.LOCK_UN)
-            except (OSError, IOError):
-                # 文件锁释放失败时静默处理
-                pass
+            except (OSError, IOError) as e:
+                # 文件锁释放失败时记录到 stderr
+                import sys
+                print(f"WARNING: Failed to release file lock: {e}", file=sys.stderr)
 
 
 def setup_logging() -> None:
@@ -96,17 +109,43 @@ def setup_logging() -> None:
 
     log_dir = Path("log")
     log_dir.mkdir(exist_ok=True)
-    file_handler = LockedTimedRotatingFileHandler(
-        filename=log_dir / "hashpass.log",
-        when="midnight",
-        backupCount=30,
-        encoding="utf-8",
-        delay=False,
-    )
-    file_handler.setFormatter(formatter)
-    file_handler.suffix = "%Y-%m-%d"
 
-    root = logging.getLogger()
-    root.setLevel(level)
-    root.addHandler(stream_handler)
-    root.addHandler(file_handler)
+    # 验证目录创建成功
+    if not log_dir.exists():
+        print(f"ERROR: Failed to create log directory: {log_dir.absolute()}", file=sys.stderr)
+        # 仅使用 StreamHandler
+        root = logging.getLogger()
+        root.setLevel(level)
+        root.addHandler(stream_handler)
+        return
+
+    try:
+        file_handler = LockedTimedRotatingFileHandler(
+            filename=log_dir / "hashpass.log",
+            when="midnight",
+            backupCount=30,
+            encoding="utf-8",
+            delay=False,
+        )
+        file_handler.setFormatter(formatter)
+        file_handler.suffix = "%Y-%m-%d"
+
+        # 验证文件处理器初始化成功
+        if not file_handler.stream:
+            print(f"WARNING: File handler stream not initialized", file=sys.stderr)
+
+        root = logging.getLogger()
+        root.setLevel(level)
+        root.addHandler(stream_handler)
+        root.addHandler(file_handler)
+
+        # 写入测试日志验证文件处理器工作正常
+        root.info("Logging system initialized successfully")
+
+    except Exception as e:
+        print(f"ERROR: Failed to initialize file handler: {e}", file=sys.stderr)
+        # 降级到仅使用 StreamHandler
+        root = logging.getLogger()
+        root.setLevel(level)
+        root.addHandler(stream_handler)
+        root.warning("File logging disabled due to initialization error")
