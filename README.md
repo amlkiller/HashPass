@@ -2,9 +2,9 @@
 
 <div align="center">
 
-**🔐 Memory-Hard Client Puzzle System**
+**内存硬度客户端谜题邀请码系统**
 
-*Fair. Atomic. Database-Free.*
+*公平 · 原子化 · 无数据库*
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
@@ -14,313 +14,304 @@
 
 ---
 
-## What is HashPass?
+## 什么是 HashPass？
 
-HashPass is a **zero-database invite code distribution system** powered by Client Puzzles and memory-hard proof-of-work. It uses an **in-memory atomic lock** to create a fair, race-based competition where:
+HashPass 是一个**无数据库邀请码分发系统**，基于 Client Puzzles 架构和内存硬度工作量证明（Argon2d）。系统通过**内存原子锁**创建公平的竞争机制：
 
-- ✅ Only one winner per puzzle (atomic verification)
-- ✅ No GPU/ASIC farming (64MB+ RAM per hash)
-- ✅ No proxy attacks (IP-bound computations)
-- ✅ No multi-accounting (hardware fingerprinting)
-- ✅ No bots (Cloudflare Turnstile protection)
-- ✅ No database (pure in-memory state)
+- 每轮谜题只有一个获胜者（原子化验证）
+- 无 GPU/ASIC 挖矿（每次哈希需 64MB+ RAM）
+- 无代理攻击（计算绑定到客户端 IP）
+- 无多账户滥用（硬件指纹绑定）
+- 无机器人（Cloudflare Turnstile 人机验证）
+- 无数据库（纯内存状态）
 
-**Core Mechanism**: All users race to solve the same puzzle. The first to submit a valid solution wins the invite code and the puzzle immediately resets - invalidating everyone else's work.
+**核心机制**：所有用户竞争解同一道谜题。第一个提交有效答案的用户获得邀请码，谜题立即重置——使所有其他用户的计算成果作废。
 
 ---
 
-## 🚀 Quick Start
+## 快速开始
 
-### Prerequisites
+### 环境要求
 
 - Python 3.9+
-- [uv](https://github.com/astral-sh/uv) (recommended) or pip
+- [uv](https://github.com/astral-sh/uv)（推荐）或 pip
 
-### Installation
+### 安装
 
 ```bash
-# Clone the repository
+# 克隆仓库
 git clone https://github.com/yourusername/hashpass.git
 cd hashpass
 
-# Install dependencies
+# 安装依赖
 uv pip install -e .
 
-# Create environment configuration
+# 创建环境配置
 cp .env.example .env
+# 编辑 .env，至少设置 ADMIN_TOKEN
 
-# Start the server (MUST be single-worker)
+# 启动服务器（必须单进程）
 python main.py
 ```
 
-Visit **http://localhost:8000** and start mining!
+访问 **http://localhost:8000** 开始挖矿！
 
 ---
 
-## ⚙️ Configuration
+## 配置
 
-### Environment Variables
+### 环境变量
 
-Create a `.env` file with the following configuration:
+复制 `.env.example` 为 `.env` 并按需修改：
 
 ```bash
-# ========================================
-# Server Configuration
-# ========================================
-PORT=8000  # Server port (default: 8000)
+# 管理员 Token（必填）
+ADMIN_TOKEN=your_secure_admin_token
 
-# ========================================
-# Cloudflare Turnstile (Bot Protection)
-# ========================================
-# Get keys: https://dash.cloudflare.com/turnstile
+# 服务器端口
+PORT=8000
+
+# Cloudflare Turnstile（开发模式）
+TURNSTILE_TEST_MODE=true
 TURNSTILE_SITE_KEY=1x00000000000000000000AA
 TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 
-# Development mode (auto-pass all challenges)
-TURNSTILE_TEST_MODE=true
-
-# ========================================
-# Puzzle Difficulty Settings
-# ========================================
-# Initial difficulty level (1-6)
+# 难度设置
 HASHPASS_DIFFICULTY=3
-
-# Dynamic difficulty range
 HASHPASS_MIN_DIFFICULTY=1
 HASHPASS_MAX_DIFFICULTY=6
+HASHPASS_TARGET_TIME=60      # 目标解题时间（秒）
+HASHPASS_TARGET_TIMEOUT=300  # 超时时间（秒）
 
-# Target solve time window (seconds)
-HASHPASS_TARGET_TIME_MIN=30
-HASHPASS_TARGET_TIME_MAX=120
-
-# ========================================
-# Argon2 Parameters (Advanced)
-# ========================================
-HASHPASS_ARGON2_TIME_COST=3         # Iteration count
-HASHPASS_ARGON2_MEMORY_COST=65536   # Memory in KB (64MB)
-HASHPASS_ARGON2_PARALLELISM=1       # Thread count (keep at 1)
-
-# ========================================
-# Webhook Integration (Optional)
-# ========================================
-# External service to notify on wins
-WEBHOOK_URL=https://your-domain.com/api/webhook
-
-# Optional Bearer Token for webhook authentication
-WEBHOOK_TOKEN=your_secret_token_here
-
-# Leave empty to disable webhooks
-# WEBHOOK_URL=
-
-# ========================================
-# Performance Optimization
-# ========================================
-# Disable uvloop (Linux/macOS only)
-# HASHPASS_DISABLE_UVLOOP=false
+# Argon2 参数
+HASHPASS_ARGON2_TIME_COST=3
+HASHPASS_ARGON2_MEMORY_COST=65536  # KB（64MB）
+HASHPASS_ARGON2_PARALLELISM=1
+HASHPASS_WORKER_COUNT=4            # 前端并行 Worker 数量
 ```
 
-⚠️ **Important**: Changes to Argon2 parameters (`HASHPASS_ARGON2_*`) must be synchronized with client-side code (`static/app.js`). Mismatched parameters will cause all verifications to fail.
+详见 `.env.example` 中的完整注释说明。
 
-### Turnstile Setup
+### Turnstile 配置
 
-**Development Mode** (No real verification):
+**开发模式**（自动通过所有验证）：
 ```bash
 TURNSTILE_TEST_MODE=true
 TURNSTILE_SITE_KEY=1x00000000000000000000AA
 TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 ```
 
-**Production Mode**:
-1. Sign up at https://dash.cloudflare.com/turnstile
-2. Create a new site widget
-3. Copy your Site Key and Secret Key
-4. Update `.env`:
+**生产模式**：
+1. 前往 [Cloudflare Turnstile 控制台](https://dash.cloudflare.com/?to=/:account/turnstile)
+2. 创建新的站点 Widget
+3. 复制 Site Key 和 Secret Key
+4. 更新 `.env`：
    ```bash
    TURNSTILE_TEST_MODE=false
-   TURNSTILE_SITE_KEY=your_actual_site_key
-   TURNSTILE_SECRET_KEY=your_actual_secret_key
+   TURNSTILE_SITE_KEY=你的真实_site_key
+   TURNSTILE_SECRET_KEY=你的真实_secret_key
    ```
 
-### Webhook Setup (Optional)
+### Webhook 配置（可选）
 
-When a user wins, HashPass can notify your external service:
+用户获胜时，HashPass 可以通知你的外部服务：
 
-**Payload Format**:
+**Payload 格式**：
 ```json
 {
-  "visitor_id": "device-fingerprint-hash",
+  "visitor_id": "设备指纹哈希",
   "invite_code": "HASHPASS-ABC123XYZ"
 }
 ```
 
-**Bearer Token Authentication**:
-
-For secure webhook endpoints, configure a Bearer Token in your `.env`:
-
+**配置示例**：
 ```bash
-WEBHOOK_TOKEN=your_secret_token_here
+WEBHOOK_URL=https://your-domain.com/api/webhook
+WEBHOOK_TOKEN=your_secret_bearer_token
 ```
 
-When `WEBHOOK_TOKEN` is set, HashPass includes it in the request header:
+携带 Bearer Token 时，请求头为：
 ```
-Authorization: Bearer your_secret_token_here
-```
-
-**Example Webhook Receiver** (Python/FastAPI):
-```python
-from fastapi import Header, HTTPException
-
-@app.post("/api/webhook")
-async def receive_webhook(
-    payload: dict,
-    authorization: str = Header(None)
-):
-    # Validate Bearer Token
-    expected_token = os.getenv("WEBHOOK_TOKEN")
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing token")
-
-    token = authorization.replace("Bearer ", "")
-    if token != expected_token:
-        raise HTTPException(status_code=403, detail="Invalid token")
-
-    # Process webhook
-    visitor_id = payload["visitor_id"]
-    invite_code = payload["invite_code"]
-    # ... your logic here
+Authorization: Bearer your_secret_bearer_token
 ```
 
-**Behavior**:
-- Sent asynchronously (non-blocking)
-- 5-second timeout
-- Failures are logged but don't affect invite code delivery
-- Uses HTTPS in production for secure transmission
+**行为特征**：
+- 异步发送（不阻塞主流程）
+- 5 秒超时，失败自动重试（指数退避）
+- 失败写入日志，不影响邀请码发放
 
 ---
 
-## 🎯 How It Works
+## 工作原理
 
-### Mining Flow
+### 挖矿流程
 
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Turnstile
-    participant Server
-    participant Worker
-
-    Client->>Turnstile: Pass challenge
-    Turnstile-->>Client: Token
-    Client->>Server: GET /api/puzzle (with token)
-    Server-->>Client: Seed + Difficulty
-
-    Client->>Worker: Start mining
-    loop Find valid hash
-        Worker->>Worker: Argon2id(nonce, salt)
-        Note over Worker: Salt = Seed + DeviceID + IP
-    end
-
-    Worker-->>Client: Found: nonce + hash
-    Client->>Server: POST /api/verify
-
-    alt First to arrive
-        Server-->>Client: Invite Code ✓
-        Server->>Server: Reset puzzle seed
-        Server-->>All: Broadcast PUZZLE_RESET
-    else Too slow
-        Server-->>Client: 409 Conflict
-    end
+```
+用户打开页面
+    │
+    ▼
+ThumbmarkJS 生成设备指纹
+    │
+    ▼
+Cloudflare Turnstile 人机验证
+    │
+    ▼
+WebSocket 连接 /api/ws?token=<turnstile_token>
+    │
+    ▼
+服务器颁发 Session Token
+    │
+    ▼
+POST /api/puzzle → 获取 seed、difficulty、Argon2 参数
+    │
+    ▼
+获取 Cloudflare Trace 数据（IP 绑定）
+    │
+    ▼
+启动 N 个 Web Worker 并行计算
+    │
+    ├── Worker 0: nonce = 0, 4, 8, ...
+    ├── Worker 1: nonce = 1, 5, 9, ...
+    ├── Worker 2: nonce = 2, 6, 10, ...
+    └── Worker 3: nonce = 3, 7, 11, ...
+         │
+         ▼
+    Argon2d(nonce, salt=seed+fingerprint+traceData)
+    直到找到前 N 位为 0 的哈希
+         │
+         ▼
+POST /api/verify → 提交解答
+         │
+    ┌────┴────┐
+    │         │
+  第一名    其他人
+    │         │
+    ▼         ▼
+获得邀请码  409 Conflict
+    │
+    ▼
+广播 PUZZLE_RESET 给所有矿工
 ```
 
-### Key Concepts
+### 服务端验证流程
 
-**1. Atomic Lock**: Python's `asyncio.Lock` ensures only one winner per puzzle round.
-
-**2. Memory-Hard Algorithm**: Each hash computation requires 64MB RAM (Argon2id), preventing GPU farms.
-
-**3. IP Binding**: Computation includes client IP in the salt. Solving on Server A and submitting from Client B fails verification.
-
-**4. Hardware Fingerprinting**: ThumbmarkJS ties solutions to physical devices (Canvas/Audio/WebGL fingerprints).
-
-**5. Dynamic Difficulty (Proportional Step)**: System automatically adjusts difficulty using a log2-proportional algorithm:
-- Adjustment step = `floor(log2(deviation_ratio))`, clamped to 1~4 bits
-- The further solve time deviates from the target midpoint, the larger the step
-- Only counts time when miners are actively mining
-- Timeout auto-resets puzzle with aggressive step (minimum -2 bits)
-
-| Solve Time | Deviation | Step |
-|------------|-----------|------|
-| 1s | 75x fast | +4 bits |
-| 5s | 15x fast | +3 bits |
-| 10s | 7.5x fast | +2 bits |
-| 25s | 3x fast | +1 bit |
-| 30-120s | In range | 0 (no change) |
-| 300s | 4x slow | -2 bits |
-| 1000s | 13x slow | -3 bits |
-
-**6. Network Hashrate Monitoring**: Real-time global mining statistics:
-- Clients report hashrate via WebSocket
-- Server aggregates and broadcasts total network hashrate
-- Provides visibility into mining competition
-- Stale data (>10s) automatically pruned
-
-**7. Process Pool Optimization**: CPU-intensive Argon2 verification runs in parallel:
-- ProcessPoolExecutor bypasses Python GIL
-- Main event loop remains responsive during verification
-- Worker count: CPU cores - 1 (reserves one for main process)
-
-**8. Event Loop Optimization (uvloop)**: Automatic performance enhancement on Linux/macOS:
-- **WebSocket Broadcasting**: 30-40% faster message delivery to concurrent miners
-- **Atomic Lock Operations**: 5-10% reduced lock contention overhead
-- **Connection Handling**: 2x more concurrent connections supported
-- **Platform Support**:
-  - ✅ **Linux** (production recommended): uvloop active
-  - ✅ **macOS**: uvloop active
-  - ⚠️ **Windows**: Standard asyncio (uvloop not supported, use WSL2 for production)
-- **No configuration needed** - automatically detected and installed
-- **Disable if needed**: Set `HASHPASS_DISABLE_UVLOOP=true` in environment
-
-**Difficulty Scaling**:
 ```
-Level 1:  ~16 attempts       (~1 second)
-Level 2:  ~256 attempts      (~15 seconds)
-Level 3:  ~4096 attempts     (~1 minute)
-Level 4:  ~65536 attempts    (~15 minutes)
-Level 5:  ~1M attempts       (~4 hours)
-Level 6:  ~16M attempts      (~64 hours)
+接收 /api/verify 请求
+    │
+    ├─ 验证 Session Token（IP 绑定检查）
+    ├─ 检查 IP 黑名单
+    ├─ 验证 TraceData IP 与请求 IP 一致
+    ├─ 快速检查 seed 是否已变（锁前）
+    │
+    ▼ 进入 asyncio.Lock 临界区
+    │
+    ├─ 二次检查 seed（DCL 模式）
+    ├─ 计算解题耗时（仅含挖矿时间）
+    ├─ ProcessPoolExecutor 验证 Argon2 哈希（非阻塞）
+    ├─ 生成 HMAC 派生邀请码
+    ├─ 发送异步 Webhook 通知
+    ├─ 动态难度调整
+    ├─ 重置谜题 + 广播 PUZZLE_RESET
+    └─ 重启超时检查器
+    │
+    ▼ 退出临界区
+    │
+    └─ 异步写入 verify.json 日志
 ```
+
+### 关键设计
+
+**1. 原子锁**：`asyncio.Lock` 确保每轮谜题只有一个获胜者，防止竞态条件。
+
+**2. 内存硬度算法**：每次哈希计算需要 64MB RAM（Argon2d），从根本上阻断 GPU 农场。
+
+**3. IP 绑定**：计算盐值包含客户端 IP，在其他 IP 提交会验证失败，防止代理攻击。
+
+**4. 硬件指纹**：ThumbmarkJS 通过 Canvas、WebGL、Audio 等采集设备特征，绑定解答到物理设备。
+
+**5. 双层 Token 机制**：
+- **Turnstile Token**（一次性）：首次建立 WebSocket 时验证
+- **Session Token**（持久化）：服务器生成，绑定 IP，断开后保留 5 分钟支持重连
+
+**6. 动态难度（比例步进算法）**：
+
+基于 `log2(目标中点 / 实际耗时)` 计算调整步进：
+
+| 解题耗时 | 偏离程度 | 调整幅度 |
+|---------|---------|---------|
+| 1 秒 | 极快（75 倍） | +4 bit |
+| 5 秒 | 很快（15 倍） | +3 bit |
+| 10 秒 | 较快（7.5 倍） | +2 bit |
+| 25 秒 | 稍快（3 倍） | +1 bit |
+| 目标窗口内 | 正常 | 不变 |
+| 超时 | 超慢 | 至少 -2 bit |
+
+每 +1 bit = 难度翻倍，每 -1 bit = 难度减半。步进限制在 [-4, +4] 范围。
+
+**7. 进程池优化**：`ProcessPoolExecutor` 绕过 Python GIL，在独立进程中验证 Argon2，主事件循环保持响应。
+
+**8. uvloop 加速（Linux/macOS）**：自动检测并启用，提升 WebSocket 广播 30-40% 性能，Windows 下降级为标准 asyncio。
+
+### 难度参考
+
+```
+难度 1：约 2 次哈希      (~秒级)
+难度 2：约 4 次哈希      (~秒级)
+难度 3：约 8 次哈希      (~秒级)
+难度 4：约 16 次哈希     (~数秒)
+难度 8：约 256 次哈希    (~数十秒)
+难度 12：约 4096 次哈希  (~数分钟)
+难度 16：约 65536 次哈希 (~十余分钟)
+```
+
+（实际用时取决于硬件和 Argon2 参数）
 
 ---
 
-## 📡 API Reference
+## API 参考
 
-### GET `/api/puzzle`
-Fetch current puzzle parameters.
+### 公共 API
 
-**Headers**: `Authorization: Bearer <turnstile_token>`
+#### `POST /api/puzzle`
 
-**Response**:
+获取当前谜题参数。
+
+**请求头**：`Authorization: Bearer <session_token>`
+
+**请求体**：
+```json
+{
+  "visitorId": "设备指纹"
+}
+```
+
+**响应**：
 ```json
 {
   "seed": "a1b2c3d4...",
   "difficulty": 4,
   "memory_cost": 65536,
   "time_cost": 3,
-  "parallelism": 1
+  "parallelism": 1,
+  "worker_count": 4,
+  "puzzle_start_time": 1234567890.0,
+  "last_solve_time": 87.3,
+  "average_solve_time": 95.2
 }
 ```
 
 ---
 
-### POST `/api/verify`
-Submit puzzle solution.
+#### `POST /api/verify`
 
-**Headers**: `Authorization: Bearer <turnstile_token>`
+提交谜题解答。
 
-**Request**:
+**请求头**：`Authorization: Bearer <session_token>`
+
+**请求体**：
 ```json
 {
-  "visitorId": "device-fingerprint",
+  "visitorId": "设备指纹",
   "nonce": 42856,
   "submittedSeed": "a1b2c3d4...",
   "traceData": "ip=1.2.3.4\nts=...",
@@ -328,49 +319,55 @@ Submit puzzle solution.
 }
 ```
 
-**Success Response (200)**:
+**成功（200）**：
 ```json
 {
   "invite_code": "HASHPASS-XyZ123"
 }
 ```
 
-**Error Responses**:
-- `403 Forbidden`: IP mismatch or invalid Turnstile token
-- `409 Conflict`: Puzzle already solved (seed changed)
-- `400 Bad Request`: Invalid hash (wrong difficulty)
+**错误**：
+- `401 Unauthorized`：Session Token 无效或已过期
+- `403 Forbidden`：IP 不匹配或被封禁
+- `409 Conflict`：谜题已被他人解出（seed 已变）
+- `400 Bad Request`：哈希验证失败
 
 ---
 
-### WebSocket `/api/ws?token=<token>`
-Real-time puzzle reset notifications and network statistics.
+#### `WS /api/ws?token=<token>`
 
-**Client → Server**:
+实时谜题重置通知和网络统计。
+
+**客户端 → 服务器**：
 ```json
-{"type": "ping"}                                   // Heartbeat
-{"type": "mining_start"}                           // Notify mining started
-{"type": "mining_stop"}                            // Notify mining stopped
-{"type": "hashrate", "payload": {"rate": 123.45}}  // Report hashrate (H/s)
+{"type": "ping"}
+{"type": "mining_start"}
+{"type": "mining_stop"}
+{"type": "hashrate", "payload": {"rate": 123.45}}
 ```
 
-**Server → Client**:
+**服务器 → 客户端**：
 ```json
-// Heartbeat response
+// 首次连接：颁发 Session Token
+{"type": "SESSION_TOKEN", "token": "..."}
+
+// 心跳响应
 {"type": "PONG", "online": 5}
 
-// Puzzle reset notification
+// 谜题重置通知
 {"type": "PUZZLE_RESET", "seed": "abc...", "difficulty": 4}
 
-// Network hashrate statistics (broadcast every 2s)
+// 全网算力统计（每 5 秒广播）
 {"type": "NETWORK_HASHRATE", "total_hashrate": 456.78, "active_miners": 3, "timestamp": 1234567890.0}
 ```
 
 ---
 
-### GET `/api/turnstile/config`
-Get Turnstile public configuration.
+#### `GET /api/turnstile/config`
 
-**Response**:
+获取 Turnstile 公开配置。
+
+**响应**：
 ```json
 {
   "site_key": "1x00000000000000000000AA",
@@ -380,10 +377,11 @@ Get Turnstile public configuration.
 
 ---
 
-### GET `/api/health`
-Health check endpoint.
+#### `GET /api/health`
 
-**Response**:
+健康检查。
+
+**响应**：
 ```json
 {
   "status": "ok",
@@ -393,10 +391,11 @@ Health check endpoint.
 
 ---
 
-### GET `/api/dev/trace` (Development Only)
-Mock Cloudflare Trace endpoint for local testing.
+#### `GET /api/dev/trace`
 
-**Response**:
+模拟 Cloudflare Trace（本地开发用）。
+
+**响应**（纯文本）：
 ```
 ip=127.0.0.1
 ts=1736338496
@@ -406,73 +405,273 @@ uag=Mozilla/5.0...
 
 ---
 
-## 🏗️ Architecture
+### 管理 API
 
-### Backend Stack
+所有管理端点需要请求头：`Authorization: Bearer <ADMIN_TOKEN>`
+
+#### 状态查询
+
+| 端点 | 描述 |
+|------|------|
+| `GET /api/admin/status` | 完整系统状态快照 |
+| `GET /api/admin/miners` | 活跃矿工列表（含算力） |
+| `GET /api/admin/sessions` | Session Token 列表 |
+| `GET /api/admin/blacklist` | 封禁 IP 列表 |
+
+#### 日志查询
+
+| 端点 | 描述 |
+|------|------|
+| `GET /api/admin/logs` | 邀请码日志（分页、搜索、文件选择） |
+| `GET /api/admin/logs/stats` | 邀请码日志聚合统计 |
+| `GET /api/admin/applogs` | 应用日志（分页、搜索、级别过滤） |
+
+#### 参数调整（调整后自动重置谜题）
+
+| 端点 | 描述 |
+|------|------|
+| `POST /api/admin/difficulty` | 调整难度参数 |
+| `POST /api/admin/target-time` | 调整目标时间窗口 |
+| `POST /api/admin/argon2` | 调整 Argon2 参数 |
+| `POST /api/admin/worker-count` | 设置前端 Worker 数量 |
+| `POST /api/admin/max-nonce-speed` | 设置最大计算速度限制 |
+
+#### 管理操作
+
+| 端点 | 描述 |
+|------|------|
+| `POST /api/admin/reset-puzzle` | 强制重置谜题 |
+| `POST /api/admin/kick-all` | 断开所有连接并撤销所有 Token |
+| `POST /api/admin/kick` | 封禁 IP + 踢出 + 撤销 Token |
+| `POST /api/admin/unban` | 从黑名单移除 IP |
+| `POST /api/admin/clear-sessions` | 清空所有 Session Token |
+| `POST /api/admin/regenerate-hmac` | 重新生成 HMAC 密钥 |
+
+#### 管理 WebSocket
 
 ```
-src/
-├── api/
-│   └── routes.py          # FastAPI endpoints + WebSocket
-├── core/
-│   ├── state.py           # Global SystemState (asyncio.Lock)
-│   ├── crypto.py          # Argon2 verification + HMAC codes
-│   ├── turnstile.py       # Cloudflare token verification
-│   ├── webhook.py         # Async webhook notifications
-│   ├── executor.py        # ProcessPoolExecutor (CPU-intensive tasks)
-│   └── event_loop.py      # uvloop initialization
-└── models/
-    └── schemas.py         # Pydantic request/response models
+WS /api/admin/ws?token=<admin_token>
 ```
 
-**Technologies**:
-- **FastAPI** - Async web framework
-- **argon2-cffi** - Memory-hard hashing
-- **httpx** - Async HTTP client (Turnstile + Webhooks)
-- **uvloop** - High-performance event loop (Linux/macOS)
-- **ProcessPoolExecutor** - Parallel Argon2 verification (bypasses GIL)
-
-### Frontend Stack
-
+每 2 秒推送一次系统状态快照：
+```json
+{
+  "type": "STATUS_UPDATE",
+  "active_miners": 5,
+  "online_connections": 8,
+  "total_hashrate": 1234.56,
+  "difficulty": 4,
+  "mining_time": 87.3,
+  "last_solve_time": 95.2,
+  "banned_count": 2,
+  "current_seed": "a1b2c3d4...",
+  "hashrate_chart_history": [...],
+  "solve_time_chart_history": [...]
+}
 ```
-static/
-├── index.html            # UI (Preact + Pico.css)
-├── app.js                # Mining logic + ThumbmarkJS
-├── worker.js             # Web Worker (non-blocking Argon2)
-└── style.css             # Dark/light theme styles
-```
-
-**Technologies**:
-- **Preact** - Lightweight React alternative
-- **hash-wasm** - Browser-side Argon2 (WASM)
-- **ThumbmarkJS** - Hardware fingerprinting
-- **Web Workers** - Non-blocking computation
 
 ---
 
-## 🌐 Production Deployment
+## 架构
 
-### Critical Requirement: Single Worker Mode
+### 目录结构
 
-⚠️ **MUST run with `--workers 1`**
+```
+hashpass/
+├── main.py                        # FastAPI 应用入口、中间件、生命周期
+├── pyproject.toml                 # 项目依赖配置
+├── .env.example                   # 环境变量示例
+│
+├── src/
+│   ├── api/
+│   │   ├── routes.py              # 公共 API（puzzle、verify、ws 等）
+│   │   └── admin.py               # 管理 API（status、miners、logs、操作等）
+│   │
+│   ├── core/
+│   │   ├── state.py               # 全局 SystemState 单例（锁、种子、难度、会话）
+│   │   ├── crypto.py              # Argon2d 验证 + HMAC 邀请码生成
+│   │   ├── turnstile.py           # Cloudflare Turnstile Token 验证
+│   │   ├── webhook.py             # 异步 Webhook 通知（重试+指数退避）
+│   │   ├── executor.py            # ProcessPoolExecutor（绕过 GIL）
+│   │   ├── event_loop.py          # uvloop 初始化（Linux/macOS）
+│   │   ├── useragent.py           # User-Agent 验证（阻止机器人）
+│   │   ├── admin_auth.py          # 管理员 Bearer Token 认证
+│   │   └── log_config.py          # 日志配置（文件锁处理器）
+│   │
+│   └── models/
+│       └── schemas.py             # Pydantic 数据模型
+│
+└── static/
+    ├── index.html                 # 主挖矿界面
+    ├── app.js                     # 前端入口（初始化、指纹、Turnstile）
+    ├── worker.js                  # Web Worker（Argon2d 计算）
+    ├── js/
+    │   ├── state.js               # 全局前端状态
+    │   ├── mining.js              # 挖矿编排（多 Worker 管理）
+    │   ├── websocket.js           # WebSocket 客户端（重连、Session Token）
+    │   ├── turnstile.js           # Turnstile 组件管理
+    │   ├── hashrate.js            # 算力显示（本地 + 全网）
+    │   ├── logger.js              # 日志面板（智能高亮）
+    │   ├── theme.js               # 主题切换（Light/Dark/System）
+    │   └── utils.js               # 格式化工具
+    ├── css/
+    │   └── custom.css             # 自定义 CSS 变量和样式
+    ├── admin.html                 # 管理后台界面
+    └── admin/
+        ├── app.js                 # 管理后台入口（登录、Tab 切换）
+        ├── css/admin.css          # 管理后台样式
+        └── js/
+            ├── state.js           # 管理后台状态
+            ├── api.js             # 管理 API 客户端
+            ├── websocket.js       # 管理 WebSocket（实时状态）
+            ├── dashboard.js       # 仪表盘（指标卡片、Chart.js 趋势图）
+            ├── params.js          # 参数调整面板
+            ├── logs.js            # 邀请码日志（分页、搜索）
+            ├── applogs.js         # 应用日志（分页、搜索、级别过滤）
+            └── operations.js      # 管理操作（踢出、封禁、重置）
+```
 
-Multi-worker deployments break the atomic lock because each process has independent memory. This allows multiple winners per puzzle round.
+### 技术栈
 
-### Systemd Service
+**后端**：
+- **FastAPI** — 异步 Web 框架
+- **argon2-cffi** — 内存硬哈希
+- **httpx** — 异步 HTTP 客户端（Turnstile + Webhook）
+- **uvloop** — 高性能事件循环（Linux/macOS）
+- **aiofiles** — 异步文件 I/O
+- **ProcessPoolExecutor** — 并行 Argon2 验证（绕过 GIL）
 
-Create `/etc/systemd/system/hashpass.service`:
+**前端**：
+- **Tailwind CSS** + **Pico.css** — 样式框架
+- **hash-wasm**（WASM）— 浏览器端 Argon2 计算
+- **ThumbmarkJS** — 设备指纹
+- **Web Workers** — 非阻塞并行计算
+- **Chart.js** — 管理后台趋势图
+- **ES Modules + Import Maps** — 模块化依赖管理
+
+### 全局状态（`SystemState`）
+
+```python
+class SystemState:
+    # 谜题状态
+    current_seed: str          # 当前谜题种子（32字节 hex）
+    difficulty: int            # 当前难度（前导零位数）
+    min_difficulty: int
+    max_difficulty: int
+    target_time: int           # 目标解题时间（秒）
+    target_timeout: int        # 超时时间（秒）
+
+    # 原子锁（核心）
+    lock: asyncio.Lock
+
+    # Argon2 配置
+    argon2_time_cost: int
+    argon2_memory_cost: int    # KB，默认 64MB
+    argon2_parallelism: int
+    worker_count: int          # 前端 Worker 数量
+    max_nonce_speed: int       # 最大计算速度（0=禁用）
+
+    # HMAC 密钥（256-bit，重启可持久化）
+    hmac_secret: bytes
+
+    # 挖矿追踪
+    active_miners: set         # 正在挖矿的 WebSocket
+    total_mining_time: float   # 累计挖矿时间
+    is_mining_active: bool     # 是否有矿工在线
+
+    # WebSocket 连接
+    active_connections: set    # 所有活跃连接
+    admin_connections: set     # 管理员连接
+
+    # Session Token
+    session_tokens: dict       # token → {websocket, ip, created_at, ...}
+
+    # 算力统计
+    client_hashrates: dict     # websocket → {rate, timestamp, ip}
+
+    # IP 黑名单（持久化到 blacklist.json）
+    banned_ips: set
+
+    # 后台任务
+    timeout_task: Task         # 超时检查
+    aggregation_task: Task     # 算力聚合（5秒间隔）
+    cleanup_task: Task         # Session 清理（60秒间隔）
+```
+
+---
+
+## 管理后台
+
+访问 `http://localhost:8000/admin` 进入管理后台。
+
+### 功能模块
+
+**仪表盘**：
+- 10 个实时统计卡片（矿工数、算力、难度、解题时间等）
+- Chart.js 趋势图（全网算力 + 解题时间历史）
+- 活跃矿工列表（IP、算力、在线时长、封禁操作）
+- IP 黑名单管理
+
+**参数调整**：
+- 难度参数（初始值、最小值、最大值）
+- 目标时间窗口（目标时间、超时时间）
+- Argon2 参数（时间成本、内存成本、并行度）
+- 前端 Worker 数量（1-32）
+- 计算速度限制（nonce/s，0 = 禁用）
+
+**邀请码日志**：
+- 分页查询 verify.json（每页 50 条）
+- 全文搜索（IP、邀请码、访客 ID 等）
+- 多文件切换（含轮转归档文件）
+- 统计信息（总数、唯一访客、平均/中位数解题时间）
+
+**应用日志**：
+- 分页查询 log/hashpass.log（每页 100 行）
+- 级别过滤（DEBUG / INFO / WARNING / ERROR / CRITICAL）
+- 日志高亮（错误红色、警告黄色）
+
+**管理操作**：
+- 强制重置谜题
+- 踢出所有矿工（断开连接 + 撤销 Token）
+- 清除所有会话
+- 封禁/解封 IP
+- 重新生成 HMAC 密钥（使所有已签发邀请码失效）
+
+### 安全机制
+
+- **HMAC 常量时间比较**：防止时序攻击
+- **防暴力破解**：10 次失败后锁定 IP 5 分钟
+- **路径穿越防护**：日志文件白名单校验
+- **XSS 防护**：所有动态内容使用 `textContent` 渲染
+
+---
+
+## 生产部署
+
+### 关键约束：必须单进程
+
+`asyncio.Lock` 和内存状态是进程本地的。多 Worker 部署会产生多个独立状态，破坏原子性保证。
+
+**必须使用 `--workers 1`**：
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1
+```
+
+### Systemd 服务
+
+创建 `/etc/systemd/system/hashpass.service`：
 
 ```ini
 [Unit]
-Description=HashPass Service
+Description=HashPass Invite Code System
 After=network.target
 
 [Service]
 Type=simple
 User=www-data
 WorkingDirectory=/var/www/hashpass
-Environment="PATH=/usr/local/bin:/usr/bin"
-ExecStart=/usr/local/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1
+EnvironmentFile=/var/www/hashpass/.env
+ExecStart=/usr/local/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 1
 Restart=always
 RestartSec=5
 
@@ -480,7 +679,6 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
-**Start service**:
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable hashpass
@@ -488,9 +686,7 @@ sudo systemctl start hashpass
 sudo systemctl status hashpass
 ```
 
----
-
-### Nginx Reverse Proxy
+### Nginx 反向代理
 
 ```nginx
 upstream hashpass {
@@ -498,16 +694,10 @@ upstream hashpass {
 }
 
 server {
-    listen 80;
+    listen 443 ssl;
     server_name hashpass.example.com;
 
-    # Static files
-    location /static {
-        alias /var/www/hashpass/static;
-        expires 30d;
-    }
-
-    # WebSocket endpoint
+    # WebSocket 端点（需要特殊配置）
     location /api/ws {
         proxy_pass http://hashpass;
         proxy_http_version 1.1;
@@ -519,7 +709,18 @@ server {
         proxy_send_timeout 3600s;
     }
 
-    # API endpoints
+    # 管理 WebSocket
+    location /api/admin/ws {
+        proxy_pass http://hashpass;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 3600s;
+    }
+
+    # 其他端点
     location / {
         proxy_pass http://hashpass;
         proxy_set_header Host $host;
@@ -530,58 +731,66 @@ server {
 }
 ```
 
----
+### Cloudflare 配置
 
-### Cloudflare Configuration
+1. **DNS**：添加 A 记录指向服务器
+2. **代理**：启用 Cloudflare 代理（橙色云朵图标）
+3. **SSL/TLS**：设置为 "Full" 或 "Full (strict)"
+4. **WebSocket**：默认已启用，无需额外配置
+5. **Turnstile**：在控制台创建 Widget 并配置域名
 
-1. **DNS**: Add A record pointing to your server
-2. **Proxy**: Enable Cloudflare proxy (orange cloud)
-3. **SSL/TLS**: Set to "Full" or "Full (strict)"
-4. **WebSockets**: Enabled by default (no config needed)
-5. **Turnstile**: Configure widget on dashboard
-
-**Verify Cloudflare Trace works**:
+验证 Cloudflare Trace 是否正常：
 ```bash
 curl https://your-domain.com/cdn-cgi/trace
 ```
 
----
+### 内存需求估算
 
-## 🔒 Security Mechanisms
+| 组件 | 内存占用 |
+|------|---------|
+| 基础进程 | ~50MB |
+| 每个 ProcessPoolExecutor Worker | ~50-100MB |
+| 每次 Argon2 验证（临时） | 64MB |
+| 每个 WebSocket 连接 | ~1-2KB |
 
-### What HashPass Prevents
-
-| Attack Vector | Defense Mechanism | Technical Detail |
-|---------------|-------------------|------------------|
-| **Bots** | Cloudflare Turnstile | Challenge-response verification on all endpoints |
-| **GPU Farms** | Memory-hard algorithm | 64MB RAM per hash (Argon2id) |
-| **Proxy Attacks** | IP binding | TraceData mixed into salt, verified on submit |
-| **Multi-accounting** | Hardware fingerprinting | ThumbmarkJS device signature |
-| **Race conditions** | Atomic lock | `asyncio.Lock` serializes verification |
-| **Script automation** | Turnstile + Fingerprint | Combined bot detection + device binding |
-
-### What HashPass Does NOT Prevent
-
-- Determined attackers with matching IP addresses
-- Browser engine-level fingerprint spoofing
-- Users with high-memory systems having advantages (by design)
+建议最低配置：**512MB RAM**（4 核 CPU，`argon2_memory_cost=65536`）。
 
 ---
 
-## 📊 Audit Logs
+## 安全机制
 
-The system logs all successful verifications with **automatic log rotation**:
+### 防御能力
 
-**Main Log File**: `verify.json` (always contains the latest records)
+| 攻击方式 | 防御机制 | 技术细节 |
+|---------|---------|---------|
+| 自动化机器人 | Cloudflare Turnstile | 人机挑战验证 |
+| GPU 挖矿农场 | 内存硬哈希 | Argon2d 每次需 64MB RAM |
+| 代理攻击 | IP 绑定 | TraceData IP 混入盐值，提交时验证 |
+| 多账户滥用 | 硬件指纹 | ThumbmarkJS 设备签名 |
+| 竞态条件 | 原子锁 | `asyncio.Lock` 串行化验证 |
+| Token 重放 | Session 绑定 | Session Token 绑定 IP，带过期时间 |
+| 脚本攻击 | UA 过滤 | 阻止 curl、wget、Python、Node 等 |
+| 暴力破解管理后台 | 失败锁定 | 10 次失败锁定 IP 5 分钟 |
 
-**Archived Files**: `verify_YYYYMMDD_HHMMSS.json` (created when main file reaches 1000 records)
+### 安全限制
 
-**Log Entry Format**:
+以下场景**无法防御**（设计限制）：
+- 与受害者 IP 相同范围的攻击者
+- 浏览器引擎级别的指纹欺骗
+- 高内存系统用户（Argon2 难度由设计决定）
+
+---
+
+## 审计日志
+
+所有成功验证记录到 `verify.json`，自动轮转（超过 1000 条时归档）。
+
+**日志格式**：
 ```json
 {
-  "timestamp": "2026-01-08T12:34:56.789Z",
+  "timestamp": "2026-02-20T12:34:56.789Z",
   "invite_code": "HASHPASS-ABC123",
-  "visitor_id": "device-fingerprint",
+  "visitor_id": "设备指纹",
   "nonce": 42856,
   "hash": "0000abcd...",
   "seed": "a1b2c3d4...",
@@ -590,241 +799,128 @@ The system logs all successful verifications with **automatic log rotation**:
   "difficulty": 4,
   "solve_time": 87.3,
   "new_difficulty": 4,
-  "adjustment_reason": "Perfect timing (87.3s within 30-120s)"
+  "adjustment_reason": "Solved in 87.3s (target: 30-120s), no change"
 }
 ```
 
-**Log Rotation Mechanism**:
-- Automatically triggers when `verify.json` reaches 1000 records
-- Moves old records to timestamped archive file
-- Resets main file to empty array
-- Prevents unbounded file growth
-- Archive files preserved for historical analysis
+**轮转机制**：
+- 主文件 `verify.json` 超过 1000 条自动归档
+- 归档文件格式：`verify_YYYYMMDD_HHMMSS.json`
+- 日志写入异步非阻塞，失败不影响邀请码发放
 
-**Use Cases**:
-- Security audits (detect suspicious patterns)
-- Performance analysis (solve time distributions)
-- Anti-cheat (identify multi-account behavior)
-- System optimization (tune difficulty parameters)
-- Compliance tracking (record all invite code distributions)
-
-**Note**: Logging is asynchronous and does NOT affect system operation. Failed writes are logged but don't prevent invite code distribution.
+**文件锁**：
+- Windows：`msvcrt.locking`（锁定首字节）
+- Unix/Linux/macOS：`fcntl.flock`（独占锁）
+- 应用日志使用 `LockedTimedRotatingFileHandler`
 
 ---
 
-## ❓ FAQ
+## 故障排查
 
-### Why single-worker only?
+### "Puzzle already solved" (409)
 
-Python's `asyncio.Lock` is process-local. Multiple workers = multiple independent locks = broken atomicity. User A solves Worker 1's puzzle, but Worker 2 still accepts solutions for the old seed.
+正常行为——有人抢先获胜，谜题已重置。等待或直接开始挖新谜题。
 
-### Can I run without Cloudflare?
+### "Identity mismatch" (403)
 
-Yes, but you lose IP binding. The system falls back to `request.client.host` which can be spoofed. Production deployments **strongly recommended** to use Cloudflare.
+TraceData IP 与请求 IP 不匹配。
+- **本地开发**：确保使用 `/api/dev/trace` 端点
+- **生产环境**：检查 Cloudflare 代理配置，确认 `X-Real-IP` 正确传递
 
-### How does dynamic difficulty work?
+### "Invalid or expired session token" (401)
 
-The system uses a **proportional step algorithm** based on `log2` deviation from the target midpoint (75s by default):
+Session Token 过期或 IP 已变更。刷新页面重新获取。
 
-- Solved much faster than target → large increase (up to +4 bits per round)
-- Solved slightly faster → small increase (+1 bit)
-- Solved within target window (30-120s) → no change
-- Solved slightly slower → small decrease (-1 bit)
-- Timeout (no solution after 120s) → aggressive decrease (at least -2 bits) + reset puzzle
+### WebSocket 立即关闭（1008）
 
-This allows rapid convergence: e.g., from difficulty 4 to 24 in just 5 rounds (vs. 20 rounds with fixed +1 step).
+Token 无效或已过期。刷新页面重新通过 Turnstile 验证。
 
-Configure thresholds in `.env`:
-```bash
-HASHPASS_TARGET_TIME_MIN=30
-HASHPASS_TARGET_TIME_MAX=120
-```
+### 难度不自动调整
 
-### What happens if the server restarts?
+- 确认矿工通过 WebSocket 发送了 `mining_start`/`mining_stop` 消息
+- 检查难度是否已达到 `min_difficulty` 或 `max_difficulty` 边界
+- 只有有矿工挖矿时才计入解题时间
 
-The puzzle seed resets, invalidating all in-progress work. This is by design (ephemeral state). If persistence is needed, you can store the seed in Redis or a file, but this compromises the "zero-database" architecture.
+### 全网算力显示 0
 
-### Do invite codes expire?
+- 确认前端通过 WebSocket 发送 `hashrate` 消息
+- 算力数据 10 秒无更新后自动清零
 
-Not by default. The current implementation uses HMAC signatures without timestamps. To add expiration, modify `src/core/crypto.py` to include JWT-style expiry claims.
+### 内存占用过高
 
-### What if WebSocket disconnects?
+- 减小 `HASHPASS_ARGON2_MEMORY_COST`（会降低防 GPU 能力）
+- 减少 `HASHPASS_WORKER_COUNT`
 
-Mining continues normally. WebSocket only provides real-time notifications (e.g., "someone else won, stop wasting CPU"). You can still submit solutions without an active WebSocket connection.
+### 验证速度慢
 
-### How does Turnstile token refresh work?
-
-Tokens expire after 5 minutes. The widget automatically resets and requests a new challenge. The UI disables mining during refresh and re-enables once a new token is obtained.
+- 检查日志确认 ProcessPoolExecutor 已初始化
+- 降低 `HASHPASS_ARGON2_TIME_COST`（减少安全性）
 
 ---
 
-## 🛠️ Troubleshooting
+## 常见问题
 
-### "Puzzle already solved" errors
-Normal behavior - someone else won first. The puzzle seed has reset. Start mining the new puzzle.
+### 为什么必须单进程运行？
 
-### "Identity mismatch" errors
-Client's TraceData IP doesn't match server-detected IP.
-- **Local dev**: Use `/api/dev/trace` endpoint
-- **Production**: Verify Cloudflare configuration is correct
-- Check that `X-Real-IP` header is being forwarded properly
+`asyncio.Lock` 是进程本地的。多进程 = 多个独立锁 = 破坏原子性。进程 A 中有人赢得了谜题，进程 B 对此毫不知情，仍会接受旧种子的答案，导致多人获得邀请码。
 
-### "Missing Turnstile token" errors
-- Ensure `.env` file exists with `TURNSTILE_TEST_MODE=true` for development
-- Check browser console for Turnstile Widget errors
-- Verify Turnstile script loaded (check Network tab)
-- Try refreshing the page to reinitialize Widget
+### 不使用 Cloudflare 可以吗？
 
-### Turnstile Widget not rendering
-- Check browser console for JavaScript errors
-- Verify `https://challenges.cloudflare.com/turnstile/v0/api.js` is accessible
-- Ensure no ad blockers are interfering
-- Check `/api/turnstile/config` returns valid Site Key
+可以，但失去 IP 绑定能力。系统会降级使用 `request.client.host`，该值可被伪造。生产环境**强烈建议**使用 Cloudflare。
 
-### "403 Forbidden" on API requests
-- **Frontend**: Check that `turnstileToken` is set before making requests
-- **Backend**: Verify `TURNSTILE_TEST_MODE=true` in development
-- **Production**: Confirm real Turnstile keys are set in environment
+### 服务器重启后会怎样？
 
-### WebSocket closes immediately (1008 code)
-- Token missing or invalid in WebSocket URL
-- Refresh page to get new Turnstile token
-- Check server logs for validation errors
+谜题种子重置，所有进行中的挖矿作废。IP 黑名单持久化到 `blacklist.json` 会保留；HMAC 密钥若配置了 `HASHPASS_HMAC_SECRET` 也会保留，否则随机重新生成（导致所有已签发邀请码失效）。
 
-### Multiple workers warning
-If deploying with process managers (systemd, supervisor), ensure `--workers 1` is set. Multiple workers break the atomic lock mechanism.
+### 邀请码会过期吗？
 
-### WebSocket not connecting
-- Check CORS settings
-- Ensure WebSocket endpoint is accessible
-- For production, use `wss://` (secure WebSocket)
-- Verify firewall allows WebSocket connections
+默认不过期。邀请码由 HMAC 签名生成，没有时间戳。若需要过期机制，在 `src/core/crypto.py` 中加入时间戳即可。
 
-### Difficulty not adjusting
-- Check that miners are sending `mining_start`/`mining_stop` messages
-- Verify mining time is being tracked (check server logs)
-- Ensure `HASHPASS_MIN_DIFFICULTY` and `HASHPASS_MAX_DIFFICULTY` are set correctly
-- Difficulty only adjusts after a puzzle is solved or times out
+### WebSocket 断开后挖矿会停止吗？
 
-### Network hashrate shows 0
-- Ensure frontend is sending `hashrate` messages via WebSocket
-- Check that WebSocket connection is established before mining starts
-- Verify server is receiving and aggregating hashrate data
-- Hashrate data becomes stale after 10 seconds of no updates
-
-### High memory usage
-- ProcessPoolExecutor creates worker processes (each uses ~50-100MB base memory)
-- Each Argon2 verification uses 64MB temporarily
-- Consider reducing `HASHPASS_ARGON2_MEMORY_COST` for low-memory systems (reduces anti-farming protection)
-- Default worker count: CPU cores - 1 (can be reduced in `src/core/executor.py`)
-
-### Slow verification times
-- Check ProcessPoolExecutor is initialized (`[Executor] Process pool initialized` in logs)
-- Verify system has enough CPU cores for worker processes
-- High concurrent verification load may cause queuing
-- Consider tuning `HASHPASS_ARGON2_TIME_COST` (lower = faster, but weaker anti-bot protection)
-
-### Webhook not receiving requests
-- Verify `WEBHOOK_URL` is set correctly in `.env`
-- Check webhook endpoint is accessible (use `curl` to test)
-- Review server logs for webhook errors
-- Ensure webhook endpoint accepts POST requests
-- Verify Bearer Token authentication if `WEBHOOK_TOKEN` is set
+不会。挖矿继续进行，WebSocket 仅提供实时通知（如"谜题已被他人解出"）。断开期间仍可提交答案，Session Token 保留 5 分钟。
 
 ---
 
-## 🧪 Testing
+## 贡献指南
 
-### Local Development
+欢迎提交 Pull Request！
 
-```bash
-# Start server
-python main.py
+1. Fork 本仓库
+2. 创建特性分支：`git checkout -b feature/amazing-feature`
+3. 提交更改：`git commit -m 'Add amazing feature'`
+4. 推送分支：`git push origin feature/amazing-feature`
+5. 创建 Pull Request
 
-# Test API endpoints
-curl http://localhost:8000/api/health
-curl http://localhost:8000/api/puzzle
-curl http://localhost:8000/api/dev/trace
-```
-
-### Concurrent Mining Test
-
-1. Open two browser tabs at `http://localhost:8000`
-2. Click "Start Mining" in both tabs simultaneously
-3. First tab to find solution → receives invite code
-4. Second tab → receives 409 Conflict error
-5. Both tabs → receive WebSocket `PUZZLE_RESET` notification
-
-### WebSocket Test
-
-```javascript
-// Browser console
-const ws = new WebSocket('ws://localhost:8000/api/ws?token=test_token');
-ws.onmessage = (e) => console.log('Received:', JSON.parse(e.data));
-ws.onopen = () => ws.send(JSON.stringify({type: 'ping'}));
-```
-
-### Dynamic Difficulty Test
-
-1. Set low initial difficulty: `HASHPASS_DIFFICULTY=1`
-2. Mine puzzle quickly (should solve in <10 seconds)
-3. Check logs: difficulty should auto-increase
-4. Wait 120+ seconds without submitting → difficulty decreases
+**提交前注意**：
+- 保持 `--workers 1` 单进程要求
+- 在开发模式和生产模式下都测试 Turnstile
+- 验证 WebSocket 功能正常
+- 确认审计日志正确写入
 
 ---
 
-## 🤝 Contributing
+## 鸣谢
 
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-**Before submitting**:
-- Ensure `--workers 1` requirement is preserved
-- Test with Turnstile in both test and production modes
-- Verify WebSocket functionality
-- Check audit logs are correctly written
+- [FastAPI](https://fastapi.tiangolo.com/) — 现代异步 Python 框架
+- [Argon2](https://github.com/P-H-C/phc-winner-argon2) — 密码哈希竞赛获奖算法
+- [hash-wasm](https://github.com/Daninet/hash-wasm) — 高性能浏览器哈希库
+- [ThumbmarkJS](https://github.com/thumbmarkjs/thumbmarkjs) — 浏览器设备指纹
+- [Cloudflare](https://www.cloudflare.com/) — CDN 与 Turnstile 人机验证
+- [uvloop](https://github.com/MagicStack/uvloop) — 超高速 asyncio 事件循环
 
 ---
 
-## 📝 Technical Documentation
+## 许可证
 
-For detailed technical documentation, see [CLAUDE.md](CLAUDE.md):
-- Argon2 parameter tuning
-- Cloudflare Trace integration details
-- Memory requirements and scaling
-- Security considerations
-- Troubleshooting guide
-
----
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- [FastAPI](https://fastapi.tiangolo.com/) - Modern async Python framework
-- [Argon2](https://github.com/P-H-C/phc-winner-argon2) - Password Hashing Competition winner
-- [hash-wasm](https://github.com/Daninet/hash-wasm) - High-performance browser hashing
-- [ThumbmarkJS](https://github.com/thumbmarkjs/thumbmarkjs) - Browser fingerprinting
-- [Cloudflare](https://www.cloudflare.com/) - CDN and Turnstile bot protection
-- [uvloop](https://github.com/MagicStack/uvloop) - Ultra-fast asyncio event loop
+MIT License — 详见 [LICENSE](LICENSE) 文件。
 
 ---
 
 <div align="center">
 
-**Made with ❤️ for fair, atomic, database-free invite systems**
+**公平、原子化、无数据库的邀请码分发系统**
 
-⭐ Star this repo if you find it useful!
-
-[Report Bug](https://github.com/yourusername/hashpass/issues) · [Request Feature](https://github.com/yourusername/hashpass/issues) · [Documentation](CLAUDE.md)
+[提交 Bug](https://github.com/yourusername/hashpass/issues) · [功能请求](https://github.com/yourusername/hashpass/issues) · [技术文档](CLAUDE.md)
 
 </div>
