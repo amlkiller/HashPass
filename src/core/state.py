@@ -312,37 +312,18 @@ class SystemState:
                         mining_time = self.get_current_mining_time()
 
                         if mining_time >= self.target_timeout:
-                            old_difficulty = self.difficulty
-
-                            # 超时步长（至少降 1.0）
-                            step = self._calculate_smooth_adjustment(mining_time)
-                            timeout_step = min(step, -1.0)
-
-                            new_float = max(
-                                float(self.min_difficulty),
-                                min(
-                                    self.difficulty_float + timeout_step,
-                                    float(self.max_difficulty),
-                                ),
+                            # 将 target_timeout 作为虚拟解题时间注入 EMA
+                            old_difficulty, new_difficulty, reason = self.adjust_difficulty(
+                                self.target_timeout
                             )
-                            self.difficulty_float = new_float
-                            new_diff = round(new_float)
-                            actual_step = self.difficulty - new_diff
-
-                            if actual_step > 0:
-                                self.difficulty = new_diff
-                                reason = (
-                                    f"Timeout ({mining_time:.1f}s >= {self.target_timeout}s), "
-                                    f"-{actual_step} bit(s) | step={timeout_step:+.3f} float={new_float:.3f}"
-                                )
-                            else:
-                                reason = f"Timeout ({mining_time:.1f}s) but already at min difficulty"
 
                             logger.info(
-                                "Difficulty adjustment: %s: %d -> %d",
+                                "Difficulty adjustment (timeout %.1fs >= %ds): %s: %d -> %d",
+                                mining_time,
+                                self.target_timeout,
                                 reason,
                                 old_difficulty,
-                                self.difficulty,
+                                new_difficulty,
                             )
 
                             # 重置puzzle

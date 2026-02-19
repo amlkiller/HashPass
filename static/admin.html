@@ -129,12 +129,24 @@
                         <div class="stat-value" id="stat-avg-solve" style="color:var(--accent);">--</div>
                     </div>
                     <div class="stat-card">
+                        <div class="stat-label">挖矿时间</div>
+                        <div class="stat-value" id="info-mining-time" style="font-family:'JetBrains Mono',monospace;">--:--:--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">状态</div>
+                        <div class="stat-value" id="info-mining-status" style="color:var(--text-tertiary);">--</div>
+                    </div>
+                    <div class="stat-card">
                         <div class="stat-label">难度</div>
                         <div class="stat-value warning" id="stat-difficulty">--</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">封禁 IP</div>
                         <div class="stat-value" id="stat-banned" style="color:var(--danger,#ef4444);">0</div>
+                    </div>
+                    <div class="stat-card" style="grid-column: span 2;">
+                        <div class="stat-label">种子</div>
+                        <div class="stat-value" id="info-seed" style="font-family:'JetBrains Mono',monospace;font-size:0.875rem;word-break:break-all;">--</div>
                     </div>
                 </div>
 
@@ -149,25 +161,6 @@
                         <div>
                             <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-2">上次求解用时（秒）</div>
                             <canvas id="chart-solve-time" height="120"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Puzzle Info -->
-                <div class="param-card mb-4">
-                    <h3>谜题信息</h3>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div>
-                            <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-1">种子</div>
-                            <div class="font-mono text-xs text-[var(--text-secondary)]" id="info-seed">--</div>
-                        </div>
-                        <div>
-                            <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-1">挖矿时间</div>
-                            <div class="font-mono text-xs text-[var(--text-secondary)]" id="info-mining-time">--:--:--</div>
-                        </div>
-                        <div>
-                            <div class="text-[0.6875rem] text-[var(--text-tertiary)] font-semibold uppercase mb-1">状态</div>
-                            <div class="font-mono text-xs font-bold" id="info-mining-status" style="color:var(--text-tertiary)">--</div>
                         </div>
                     </div>
                 </div>
