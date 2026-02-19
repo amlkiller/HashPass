@@ -329,14 +329,18 @@ class SystemState:
                             # 重置puzzle
                             self.reset_puzzle()
 
-                            # 广播重置通知
-                            await self.broadcast_puzzle_reset()
+                            # 锁内快照消息（reset_puzzle 后状态已确定）
+                            reset_msg = self.get_puzzle_reset_message()
 
                             # 重新启动超时检查
                             await self.start_timeout_checker()
 
-                            # 退出当前检查循环
+                            # 退出当前检查循环（锁外广播在 break 后执行）
                             break
+
+                    # 锁外：广播重置通知（O(N) I/O 不阻塞锁）
+                    await self.broadcast_raw(reset_msg)
+                    return
 
         except asyncio.CancelledError:
             # 任务被取消（正常情况：puzzle被解出）
@@ -358,9 +362,9 @@ class SystemState:
         if disconnected:
             logger.debug("Removed %d disconnected connections", len(disconnected))
 
-    async def broadcast_puzzle_reset(self):
-        """广播 puzzle 重置通知给所有连接的客户端（并行发送）"""
-        message = json.dumps(
+    def get_puzzle_reset_message(self) -> str:
+        """构建 puzzle 重置消息的 JSON 字符串（在锁内调用以捕获快照）"""
+        return json.dumps(
             {
                 "type": "PUZZLE_RESET",
                 "seed": self.current_seed,
@@ -372,7 +376,14 @@ class SystemState:
                 "puzzle_start_time": self.puzzle_start_time,
             }
         )
+
+    async def broadcast_raw(self, message: str) -> None:
+        """广播预构建的消息字符串给所有连接的客户端（在锁外调用）"""
         await self._broadcast(message)
+
+    async def broadcast_puzzle_reset(self):
+        """广播 puzzle 重置通知给所有连接的客户端（并行发送）"""
+        await self._broadcast(self.get_puzzle_reset_message())
 
     async def broadcast_network_hashrate(self, stats: Dict[str, float]):
         """广播全网算力统计给所有连接的客户端（并行发送）"""

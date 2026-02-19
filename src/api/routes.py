@@ -430,16 +430,17 @@ async def verify_solution(
             "adjustment_reason": reason,
         }
 
-        # 6.4 重置puzzle
+        # 6.4 重置puzzle并快照广播消息（在锁内）
         state.reset_puzzle()
-
-        # 6. 广播 puzzle 重置通知给所有连接的客户端
-        await state.broadcast_puzzle_reset()
+        reset_msg = state.get_puzzle_reset_message()
 
         # 7. 取消旧的超时任务并启动新的
         await state.start_timeout_checker()
 
-    # 8. 异步写入验证日志（锁外执行，不阻塞响应）
+    # 8. 锁外：广播 puzzle 重置通知（O(N) I/O 不阻塞锁）
+    await state.broadcast_raw(reset_msg)
+
+    # 9. 异步写入验证日志（锁外执行，不阻塞响应）
     asyncio.create_task(append_to_verify_log(verify_data))
 
     return VerifyResponse(invite_code=invite_code)
