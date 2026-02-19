@@ -308,18 +308,18 @@ async def update_argon2(
 ):
     """修改 Argon2 参数（重建 PasswordHasher）"""
     if body.time_cost is not None:
-        if body.time_cost < 1 or body.time_cost > 10:
-            return {"error": "time_cost must be between 1 and 10"}
+        if body.time_cost < 1:
+            return {"error": "time_cost must be >= 1"}
         state.argon2_time_cost = body.time_cost
 
     if body.memory_cost is not None:
-        if body.memory_cost < 1024 or body.memory_cost > 1048576:
-            return {"error": "memory_cost must be between 1024 and 1048576 KB"}
+        if body.memory_cost < 8:
+            return {"error": "memory_cost must be >= 8 KB"}
         state.argon2_memory_cost = body.memory_cost
 
     if body.parallelism is not None:
-        if body.parallelism < 1 or body.parallelism > 8:
-            return {"error": "parallelism must be between 1 and 8"}
+        if body.parallelism < 1:
+            return {"error": "parallelism must be >= 1"}
         state.argon2_parallelism = body.parallelism
 
     # 重建 PasswordHasher
