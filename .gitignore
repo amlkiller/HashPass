@@ -15,6 +15,7 @@ wheels/
 # Verification logs
 verify.json
 verify_*.json
+verify.json.lock
 
 .claude
 

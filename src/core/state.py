@@ -425,7 +425,7 @@ class SystemState:
         active_rates = []
         stale_connections = []
 
-        for ws, data in self.client_hashrates.items():
+        for ws, data in list(self.client_hashrates.items()):
             age = current_time - data["timestamp"]
             if age <= self.hashrate_stale_timeout:
                 active_rates.append(data["rate"])
@@ -568,7 +568,7 @@ class SystemState:
             websocket: 要标记 Token 的 WebSocket 连接
         """
         # 找到该 WebSocket 对应的所有 Token
-        for token, data in self.session_tokens.items():
+        for token, data in list(self.session_tokens.items()):
             if data["websocket"] == websocket:
                 # 标记为未连接
                 data["is_connected"] = False
@@ -616,7 +616,7 @@ class SystemState:
             吊销的 Token 数量
         """
         revoked = 0
-        for token, data in self.session_tokens.items():
+        for token, data in list(self.session_tokens.items()):
             if data.get("ip") == ip and not data.get("revoked"):
                 data["revoked"] = True
                 data["is_connected"] = False
@@ -637,7 +637,7 @@ class SystemState:
             吊销的 Token 数量
         """
         revoked = 0
-        for token, data in self.session_tokens.items():
+        for token, data in list(self.session_tokens.items()):
             if not data.get("revoked"):
                 data["revoked"] = True
                 data["is_connected"] = False
@@ -693,7 +693,7 @@ class SystemState:
         current_time = time.time()
         tokens_to_remove = []
 
-        for token, data in self.session_tokens.items():
+        for token, data in list(self.session_tokens.items()):
             # 清理已吊销的 Token
             if data.get("revoked"):
                 tokens_to_remove.append(token)
@@ -752,7 +752,7 @@ class SystemState:
         miners = []
         seen_ws = set()
 
-        for ws, data in self.client_hashrates.items():
+        for ws, data in list(self.client_hashrates.items()):
             age = current_time - data.get("timestamp", current_time)
             if age > self.hashrate_stale_timeout:
                 continue
@@ -792,7 +792,7 @@ class SystemState:
     def get_sessions_info(self) -> list:
         """从 session_tokens 提取会话列表（去除 WebSocket 引用）"""
         sessions = []
-        for token_str, data in self.session_tokens.items():
+        for token_str, data in list(self.session_tokens.items()):
             sessions.append(
                 {
                     "token_preview": token_str[:8] + "...",

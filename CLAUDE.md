@@ -59,6 +59,7 @@ src/
     event_loop.py              # uvloop initialization (Linux/macOS)
     useragent.py               # User-Agent validation (block bots/curl/wget)
     admin_auth.py              # Admin Bearer token authentication
+    log_config.py              # Logging configuration with file-locked handlers
   models/
     schemas.py                 # Pydantic models (public + admin)
 static/
@@ -283,6 +284,13 @@ Automatically installed at startup if available. Provides ~30-40% faster WebSock
 All successful verifications logged to `verify.json` with automatic rotation at 1000 records (archived to `verify_YYYYMMDD_HHMMSS.json`). Logging is async and non-blocking.
 
 **Log entry fields**: timestamp, invite_code, visitor_id, nonce, hash, seed, real_ip, trace_data, difficulty, solve_time, new_difficulty, adjustment_reason.
+
+**File locking**: Both `verify.json` and `log/hashpass.log` use cross-platform file locks to prevent concurrent write conflicts:
+- Windows: `msvcrt.locking` (locks first byte of file)
+- Unix/Linux/macOS: `fcntl.flock` (exclusive lock)
+- Verification logs use a separate lock file (`verify.json.lock`) to coordinate writes
+- Application logs use `LockedTimedRotatingFileHandler` with built-in file locking
+- All locks are blocking and automatically released after write completion
 
 ## Important Constraints
 
