@@ -55,13 +55,13 @@ function renderLogs(data) {
     const ts = r.timestamp ? new Date(r.timestamp).toLocaleString() : "--";
     return `
       <tr>
-        <td style="font-size:0.6875rem;">${escapeHtml(ts)}</td>
-        <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;">${escapeHtml(r.invite_code || "")}</td>
-        <td style="font-family:'JetBrains Mono',monospace;font-size:0.6875rem;" title="${escapeHtml(r.visitor_id || "")}">${escapeHtml((r.visitor_id || "").slice(0, 12))}...</td>
-        <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;">${escapeHtml(r.real_ip || "")}</td>
-        <td>${r.difficulty ?? "--"}</td>
-        <td>${r.solve_time != null ? r.solve_time + "s" : "--"}</td>
-        <td style="font-size:0.6875rem;" title="${escapeHtml(r.adjustment_reason || "")}">${escapeHtml((r.adjustment_reason || "").slice(0, 30))}</td>
+        <td style="font-size:0.6875rem;white-space:nowrap;">${escapeHtml(ts)}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;white-space:nowrap;">${escapeHtml(r.invite_code || "")}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:0.6875rem;white-space:nowrap;" title="${escapeHtml(r.visitor_id || "")}">${escapeHtml(r.visitor_id || "")}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;white-space:nowrap;">${escapeHtml(r.real_ip || "")}</td>
+        <td style="white-space:nowrap;">${r.difficulty ?? "--"}</td>
+        <td style="white-space:nowrap;">${r.solve_time != null ? r.solve_time + "s" : "--"}</td>
+        <td style="font-size:0.6875rem;white-space:nowrap;" title="${escapeHtml(r.adjustment_reason || "")}">${escapeHtml(r.adjustment_reason || "")}</td>
       </tr>
     `;
   }).join("");

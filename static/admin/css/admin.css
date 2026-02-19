@@ -121,7 +121,6 @@
     padding: 0.625rem 1rem;
     color: var(--text-secondary);
     border-bottom: 1px solid var(--border-color);
-    white-space: nowrap;
 }
 
 .admin-table tbody tr:last-child td {
