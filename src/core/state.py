@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Set
 
 import aiofiles
-
 from argon2 import PasswordHasher, Type
 from fastapi import WebSocket
 
@@ -114,8 +113,8 @@ class SystemState:
 
         # 管理面板图表历史（内存态，最多 50 点）
         self.chart_history_max: int = 50
-        self.hashrate_chart_history: list = []   # 全网算力采样（每5秒一次）
-        self.solve_time_chart_history: list = [] # 平均求解用时（每次解题时追加）
+        self.hashrate_chart_history: list = []  # 全网算力采样（每5秒一次）
+        self.solve_time_chart_history: list = []  # 平均求解用时（每次解题时追加）
 
         # IP -> WebSocket 映射，追踪每个 IP 的活跃连接（限制同 IP 多开）
         self.ip_connections: Dict[str, WebSocket] = {}
@@ -131,9 +130,10 @@ class SystemState:
             data = json.loads(p.read_text(encoding="utf-8"))
             if not isinstance(data, list) or not data:
                 return
-            N = round(2.0 / self.ema_alpha) - 1   # = 5
+            N = round(2.0 / self.ema_alpha) - 1  # = 5
             times = [
-                r["solve_time"] for r in data[-N:]
+                r["solve_time"]
+                for r in data[-N:]
                 if isinstance(r.get("solve_time"), (int, float)) and r["solve_time"] > 0
             ]
             if not times:
@@ -142,7 +142,9 @@ class SystemState:
             for t in times[1:]:
                 ema = self.ema_alpha * t + (1 - self.ema_alpha) * ema
             self.ema_solve_time = ema
-            logger.info("EMA solve time initialized: %.1fs (%d records)", ema, len(times))
+            logger.info(
+                "EMA solve time initialized: %.1fs (%d records)", ema, len(times)
+            )
         except Exception as e:
             logger.warning("Failed to load EMA from history: %s", e)
 
@@ -312,13 +314,16 @@ class SystemState:
                         if mining_time >= self.target_timeout:
                             old_difficulty = self.difficulty
 
-                            # 超时步长（至少降 2.0）
+                            # 超时步长（至少降 1.0）
                             step = self._calculate_smooth_adjustment(mining_time)
-                            timeout_step = min(step, -2.0)
+                            timeout_step = min(step, -1.0)
 
                             new_float = max(
                                 float(self.min_difficulty),
-                                min(self.difficulty_float + timeout_step, float(self.max_difficulty)),
+                                min(
+                                    self.difficulty_float + timeout_step,
+                                    float(self.max_difficulty),
+                                ),
                             )
                             self.difficulty_float = new_float
                             new_diff = round(new_float)
@@ -335,7 +340,9 @@ class SystemState:
 
                             logger.info(
                                 "Difficulty adjustment: %s: %d -> %d",
-                                reason, old_difficulty, self.difficulty,
+                                reason,
+                                old_difficulty,
+                                self.difficulty,
                             )
 
                             # 重置puzzle
@@ -362,7 +369,8 @@ class SystemState:
         tasks = [conn.send_text(message) for conn in connections_snapshot]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         disconnected = {
-            conn for conn, result in zip(connections_snapshot, results)
+            conn
+            for conn, result in zip(connections_snapshot, results)
             if isinstance(result, Exception)
         }
         self.active_connections -= disconnected
@@ -376,7 +384,9 @@ class SystemState:
                 "type": "PUZZLE_RESET",
                 "seed": self.current_seed,
                 "difficulty": self.difficulty,
-                "solve_time": round(self.last_solve_time, 2) if self.last_solve_time is not None else None,
+                "solve_time": round(self.last_solve_time, 2)
+                if self.last_solve_time is not None
+                else None,
                 "average_solve_time": self.average_solve_time,
                 "puzzle_start_time": self.puzzle_start_time,
             }
@@ -463,7 +473,9 @@ class SystemState:
                     stats = self.get_network_hashrate()
 
                     # 追加算力历史（供管理面板图表使用）
-                    self.hashrate_chart_history.append(round(stats["total_hashrate"], 2))
+                    self.hashrate_chart_history.append(
+                        round(stats["total_hashrate"], 2)
+                    )
                     if len(self.hashrate_chart_history) > self.chart_history_max:
                         self.hashrate_chart_history.pop(0)
 
@@ -516,7 +528,8 @@ class SystemState:
         }
         logger.info(
             "Session token generated for IP %s (total sessions: %d)",
-            ip, len(self.session_tokens),
+            ip,
+            len(self.session_tokens),
         )
         return token
 
@@ -545,7 +558,8 @@ class SystemState:
         if token_data["ip"] != request_ip:
             logger.debug(
                 "Token IP mismatch: token_ip=%s, request_ip=%s",
-                token_data["ip"], request_ip,
+                token_data["ip"],
+                request_ip,
             )
             return False
 
@@ -557,7 +571,8 @@ class SystemState:
                 if time_since_disconnect > self.token_expiry_seconds:
                     logger.debug(
                         "Token expired (disconnected %.1fs > %ds)",
-                        time_since_disconnect, self.token_expiry_seconds,
+                        time_since_disconnect,
+                        self.token_expiry_seconds,
                     )
                     return False
 
@@ -665,7 +680,8 @@ class SystemState:
                     if expired_count > 0:
                         logger.debug(
                             "Cleaned up %d expired token(s) | remaining: %d",
-                            expired_count, len(self.session_tokens),
+                            expired_count,
+                            len(self.session_tokens),
                         )
                 except asyncio.CancelledError:
                     logger.debug("Session token cleanup task cancelled")
@@ -726,7 +742,9 @@ class SystemState:
             "max_difficulty": self.max_difficulty,
             "target_time": self.target_time,
             "target_timeout": self.target_timeout,
-            "ema_solve_time": round(self.ema_solve_time, 2) if self.ema_solve_time is not None else None,
+            "ema_solve_time": round(self.ema_solve_time, 2)
+            if self.ema_solve_time is not None
+            else None,
             "current_seed": self.current_seed,
             "puzzle_start_time": self.puzzle_start_time,
             "mining_time": round(self.get_current_mining_time(), 2),
@@ -758,13 +776,17 @@ class SystemState:
             if age > self.hashrate_stale_timeout:
                 continue
             seen_ws.add(ws)
-            miners.append({
-                "ip": data.get("ip", "unknown"),
-                "hashrate": round(data.get("rate", 0), 2),
-                "last_seen": round(age, 1),
-                "connected_since": round(current_time - data.get("connected_at", current_time)),
-                "overspeed": False,
-            })
+            miners.append(
+                {
+                    "ip": data.get("ip", "unknown"),
+                    "hashrate": round(data.get("rate", 0), 2),
+                    "last_seen": round(age, 1),
+                    "connected_since": round(
+                        current_time - data.get("connected_at", current_time)
+                    ),
+                    "overspeed": False,
+                }
+            )
 
         for ws, data in self.overspeed_hashrates.items():
             if ws in seen_ws:
@@ -772,13 +794,17 @@ class SystemState:
             age = current_time - data.get("timestamp", current_time)
             if age > self.hashrate_stale_timeout:
                 continue
-            miners.append({
-                "ip": data.get("ip", "unknown"),
-                "hashrate": round(data.get("rate", 0), 2),
-                "last_seen": round(age, 1),
-                "connected_since": round(current_time - data.get("connected_at", current_time)),
-                "overspeed": True,
-            })
+            miners.append(
+                {
+                    "ip": data.get("ip", "unknown"),
+                    "hashrate": round(data.get("rate", 0), 2),
+                    "last_seen": round(age, 1),
+                    "connected_since": round(
+                        current_time - data.get("connected_at", current_time)
+                    ),
+                    "overspeed": True,
+                }
+            )
 
         return miners
 
@@ -786,13 +812,15 @@ class SystemState:
         """从 session_tokens 提取会话列表（去除 WebSocket 引用）"""
         sessions = []
         for token_str, data in self.session_tokens.items():
-            sessions.append({
-                "token_preview": token_str[:8] + "...",
-                "ip": data.get("ip", "unknown"),
-                "created_at": data.get("created_at"),
-                "is_connected": data.get("is_connected", False),
-                "disconnected_at": data.get("disconnected_at"),
-            })
+            sessions.append(
+                {
+                    "token_preview": token_str[:8] + "...",
+                    "ip": data.get("ip", "unknown"),
+                    "created_at": data.get("created_at"),
+                    "is_connected": data.get("is_connected", False),
+                    "disconnected_at": data.get("disconnected_at"),
+                }
+            )
         return sessions
 
     def ban_ip(self, ip: str) -> bool:

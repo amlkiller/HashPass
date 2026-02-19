@@ -587,3 +587,24 @@
         width: 100%;
     }
 }
+
+/* ==================== App Logs ==================== */
+
+.applog-line {
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+tr.applog-error .applog-line {
+    color: var(--danger, #ef4444);
+}
+
+tr.applog-warning .applog-line {
+    color: var(--warning, #f59e0b);
+}
+
+tr.applog-debug .applog-line {
+    color: var(--text-tertiary);
+}

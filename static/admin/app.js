@@ -8,6 +8,7 @@ import { initDashboard, destroyDashboard } from "./js/dashboard.js";
 import { initParams } from "./js/params.js";
 import { initLogs } from "./js/logs.js";
 import { initOperations } from "./js/operations.js";
+import { initAppLogs } from "./js/applogs.js";
 
 // ===== Toast System =====
 
@@ -164,6 +165,8 @@ function switchTab(tab) {
     initParams();
   } else if (tab === "logs") {
     initLogs();
+  } else if (tab === "applogs") {
+    initAppLogs();
   } else if (tab === "operations") {
     initOperations();
   }

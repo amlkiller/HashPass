@@ -32,6 +32,8 @@ export const api = {
   getLogs: (page, perPage, search, file) =>
     request(`/logs?page=${page}&per_page=${perPage}&search=${encodeURIComponent(search)}&file=${encodeURIComponent(file)}`),
   getLogStats: () => request("/logs/stats"),
+  getAppLogs: (page, perPage, search, file, level) =>
+    request(`/applogs?page=${page}&per_page=${perPage}&search=${encodeURIComponent(search)}&file=${encodeURIComponent(file)}&level=${encodeURIComponent(level)}`),
 
   updateDifficulty: (data) => request("/difficulty", { method: "POST", body: JSON.stringify(data) }),
   updateTargetTime: (data) => request("/target-time", { method: "POST", body: JSON.stringify(data) }),

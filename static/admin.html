@@ -95,7 +95,8 @@
             <div class="admin-tabs">
                 <button class="admin-tab active" data-tab="dashboard" onclick="switchTab('dashboard')">仪表盘</button>
                 <button class="admin-tab" data-tab="params" onclick="switchTab('params')">参数</button>
-                <button class="admin-tab" data-tab="logs" onclick="switchTab('logs')">日志</button>
+                <button class="admin-tab" data-tab="logs" onclick="switchTab('logs')">邀请码</button>
+                <button class="admin-tab" data-tab="applogs" onclick="switchTab('applogs')">日志</button>
                 <button class="admin-tab" data-tab="operations" onclick="switchTab('operations')">操作</button>
             </div>
         </nav>
@@ -325,6 +326,46 @@
 
                     <!-- Pagination -->
                     <div class="pagination" id="logs-pagination"></div>
+                </div>
+            </div>
+
+            <!-- ===== App Logs Tab ===== -->
+            <div class="tab-panel" data-panel="applogs" style="display:none;">
+                <div class="flex flex-col gap-4">
+                    <!-- Controls -->
+                    <div class="search-bar">
+                        <input type="text" class="search-input" id="applog-search-input" placeholder="搜索日志内容..." onkeydown="if(event.key==='Enter')_appLogsSearch()">
+                        <select class="file-select" id="applog-file-select" onchange="_appLogsFileChange()">
+                            <option value="hashpass.log">hashpass.log</option>
+                        </select>
+                        <select class="file-select" id="applog-level-select" onchange="_appLogsLevelChange()" style="width:auto;">
+                            <option value="">ALL</option>
+                            <option value="DEBUG">DEBUG</option>
+                            <option value="INFO">INFO</option>
+                            <option value="WARNING">WARNING</option>
+                            <option value="ERROR">ERROR</option>
+                            <option value="CRITICAL">CRITICAL</option>
+                        </select>
+                        <button class="admin-btn primary" onclick="_appLogsSearch()">搜索</button>
+                    </div>
+
+                    <!-- Log Table -->
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:3.5rem;text-align:right;">#</th>
+                                    <th>日志内容</th>
+                                </tr>
+                            </thead>
+                            <tbody id="applog-tbody">
+                                <tr><td colspan="2" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">加载中...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination" id="applog-pagination"></div>
                 </div>
             </div>
 

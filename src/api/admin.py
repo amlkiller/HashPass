@@ -58,6 +58,17 @@ def _list_log_files() -> list[str]:
     return files
 
 
+def _list_app_log_files() -> list[str]:
+    """列出 log/ 目录下所有应用日志文件名（白名单校验）"""
+    log_dir = Path("log")
+    if not log_dir.exists():
+        return []
+    files = []
+    for p in sorted(log_dir.glob("hashpass.log*"), reverse=True):
+        files.append(p.name)
+    return files
+
+
 @admin_router.get("/logs")
 async def get_logs(
     _: str = Depends(require_admin),
@@ -148,6 +159,63 @@ async def get_log_stats(_: str = Depends(require_admin)):
         "avg_solve_time": round(avg_solve_time, 2),
         "median_solve_time": round(median_solve_time, 2),
         "difficulty_distribution": difficulty_dist,
+    }
+
+
+@admin_router.get("/applogs")
+async def get_app_logs(
+    _: str = Depends(require_admin),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(100, ge=1, le=500),
+    search: str = Query(""),
+    file: str = Query("hashpass.log"),
+    level: str = Query(""),
+):
+    """应用日志（分页 + 搜索 + 级别过滤 + 文件选择）"""
+    allowed_files = _list_app_log_files()
+    if not allowed_files:
+        return {"lines": [], "total": 0, "page": page, "pages": 0, "files": []}
+
+    # 防路径穿越：文件名必须在白名单中
+    if file not in allowed_files:
+        file = allowed_files[0]
+
+    log_path = Path("log") / file
+    lines = []
+    if log_path.exists():
+        try:
+            with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+                lines = f.readlines()
+        except IOError:
+            lines = []
+
+    # 去掉行尾换行符
+    lines = [ln.rstrip("\n\r") for ln in lines if ln.strip()]
+
+    # 级别过滤（匹配行中的 " LEVEL " 字段）
+    if level and level != "ALL":
+        level_marker = f" {level} "
+        lines = [ln for ln in lines if level_marker in ln]
+
+    # 关键词搜索
+    if search:
+        search_lower = search.lower()
+        lines = [ln for ln in lines if search_lower in ln.lower()]
+
+    # 倒序（最新在前）
+    lines.reverse()
+
+    total = len(lines)
+    pages = max(1, (total + per_page - 1) // per_page)
+    start = (page - 1) * per_page
+    end = start + per_page
+
+    return {
+        "lines": lines[start:end],
+        "total": total,
+        "page": page,
+        "pages": pages,
+        "files": allowed_files,
     }
 
 
