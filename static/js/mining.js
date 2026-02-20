@@ -9,6 +9,10 @@ import { formatTime } from "./utils.js";
 import { updateHashRate, resetHashRate } from "./hashrate.js";
 import { sendHashrateToServer, notifyMiningStart, notifyMiningStop } from "./websocket.js";
 
+// 模块级变量：要求难度 & 最佳难度刷新定时器
+let _requiredDifficulty = null;
+let _bestDifficultyTimer = null;
+
 /**
  * 格式化解题时间
  * @param {number} seconds - 秒数
@@ -80,6 +84,25 @@ export function updateSolveTimeStats(last, avg) {
   if (!el) return;
 
   el.textContent = `上次 ${formatSolveTime(last)} / 平均 ${formatSolveTime(avg)}`;
+}
+
+/**
+ * 更新难度显示（要求难度 / 最佳难度）
+ */
+export function updateDifficultyDisplay() {
+  const req = _requiredDifficulty != null ? _requiredDifficulty : "-";
+  const best = state.bestLeadingZeros > 0 ? state.bestLeadingZeros : "-";
+  const el = document.getElementById("difficulty");
+  if (el) el.textContent = `${req} / ${best}`;
+}
+
+/**
+ * 设置要求难度并立即刷新显示
+ * @param {number|null} difficulty - 要求难度
+ */
+export function setRequiredDifficulty(difficulty) {
+  _requiredDifficulty = difficulty;
+  updateDifficultyDisplay();
 }
 
 /**
@@ -251,8 +274,10 @@ export async function startMining() {
     state.currentSeed = puzzle.seed;
     const workerCount = puzzle.worker_count || 1;
 
-    // 更新难度显示
-    document.getElementById("difficulty").textContent = puzzle.difficulty;
+    // 更新难度显示，启动 10s 定时刷新最佳难度
+    setRequiredDifficulty(puzzle.difficulty);
+    if (_bestDifficultyTimer) clearInterval(_bestDifficultyTimer);
+    _bestDifficultyTimer = setInterval(updateDifficultyDisplay, 10000);
 
     // 初始化谜题统计
     if (puzzle.puzzle_start_time) startPuzzleDurationTimer(puzzle.puzzle_start_time);
@@ -369,6 +394,12 @@ export function stopMining() {
 
   // 停止计时器
   stopMiningTimer();
+
+  // 停止最佳难度刷新定时器
+  if (_bestDifficultyTimer) {
+    clearInterval(_bestDifficultyTimer);
+    _bestDifficultyTimer = null;
+  }
 
   // 重置哈希速率显示
   resetHashRate();

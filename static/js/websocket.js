@@ -129,8 +129,8 @@ function handleWebSocketMessage(data) {
       .then(r => r.ok ? r.json() : null)
       .then(puzzle => {
         if (!puzzle) return;
-        document.getElementById("difficulty").textContent = puzzle.difficulty;
-        getMining().then(({ startPuzzleDurationTimer, updateSolveTimeStats }) => {
+        getMining().then(({ setRequiredDifficulty, startPuzzleDurationTimer, updateSolveTimeStats }) => {
+          setRequiredDifficulty(puzzle.difficulty);
           if (puzzle.puzzle_start_time) startPuzzleDurationTimer(puzzle.puzzle_start_time);
           updateSolveTimeStats(puzzle.last_solve_time ?? null, puzzle.average_solve_time ?? null);
         });
@@ -147,14 +147,13 @@ function handleWebSocketMessage(data) {
     log("检测到新谜题，本轮已结束！", "error");
     log(`新种子: ${data.seed.substring(0, 16)}...`);
 
-    // 更新难度显示
-    document.getElementById("difficulty").textContent = data.difficulty;
-
     // 更新谜题统计
     if (data.solve_time != null) {
       log(`上轮用时: ${data.solve_time}s`);
     }
-    getMining().then(({ startPuzzleDurationTimer, updateSolveTimeStats }) => {
+    state.bestLeadingZeros = 0;
+    getMining().then(({ setRequiredDifficulty, startPuzzleDurationTimer, updateSolveTimeStats }) => {
+      setRequiredDifficulty(data.difficulty);
       updateSolveTimeStats(data.solve_time ?? null, data.average_solve_time ?? null);
       if (data.puzzle_start_time) startPuzzleDurationTimer(data.puzzle_start_time);
     });
