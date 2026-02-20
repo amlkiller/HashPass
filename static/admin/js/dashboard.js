@@ -120,11 +120,13 @@ export function destroyDashboard() {
 
 export function renderDashboardUpdate(data) {
   // 更新统计卡片（由 WebSocket STATUS_UPDATE 驱动）
-  setText("stat-miners", data.active_miners ?? "--");
-  setText("stat-connections", data.active_connections ?? "--");
+  const miners = data.active_miners ?? "--";
+  const conns = data.active_connections ?? "--";
+  setText("stat-miners-connections", `${miners}/${conns}`);
   setText("stat-hashrate", formatHR(data.total_hashrate || 0));
   setText("stat-last-solve", data.last_solve_time != null ? `${data.last_solve_time.toFixed(1)}s` : "--");
   setText("stat-avg-solve", data.average_solve_time != null ? `${data.average_solve_time.toFixed(1)}s` : "--");
+  setText("stat-ema-solve", data.ema_solve_time != null ? `${data.ema_solve_time.toFixed(1)}s` : "--");
   setText("stat-difficulty", data.difficulty ?? "--");
   setText("stat-banned", data.banned_ips_count ?? "0");
 

@@ -109,12 +109,8 @@
                 <!-- Stat Cards -->
                 <div class="stat-grid mb-4">
                     <div class="stat-card">
-                        <div class="stat-label">活跃矿工</div>
-                        <div class="stat-value accent" id="stat-miners">--</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">连接数</div>
-                        <div class="stat-value" id="stat-connections">--</div>
+                        <div class="stat-label">矿工/连接数</div>
+                        <div class="stat-value accent" id="stat-miners-connections">--</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">全网算力</div>
@@ -127,6 +123,10 @@
                     <div class="stat-card">
                         <div class="stat-label">平均求解用时</div>
                         <div class="stat-value" id="stat-avg-solve" style="color:var(--accent);">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">EMA 用时</div>
+                        <div class="stat-value" id="stat-ema-solve" style="color:var(--accent);">--</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">挖矿时间</div>
@@ -307,12 +307,13 @@
                                     <th>访客 ID</th>
                                     <th>IP</th>
                                     <th>难度</th>
+                                    <th>Nonce</th>
                                     <th>求解时间</th>
                                     <th>调整</th>
                                 </tr>
                             </thead>
                             <tbody id="logs-tbody">
-                                <tr><td colspan="7" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">加载中...</td></tr>
+                                <tr><td colspan="8" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">加载中...</td></tr>
                             </tbody>
                         </table>
                     </div>

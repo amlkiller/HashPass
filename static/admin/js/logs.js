@@ -47,7 +47,7 @@ function renderLogs(data) {
   if (!tbody) return;
 
   if (data.records.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">未找到记录</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">未找到记录</td></tr>`;
     return;
   }
 
@@ -60,6 +60,7 @@ function renderLogs(data) {
         <td style="font-family:'JetBrains Mono',monospace;font-size:0.6875rem;white-space:nowrap;" title="${escapeHtml(r.visitor_id || "")}">${escapeHtml(r.visitor_id || "")}</td>
         <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;white-space:nowrap;">${escapeHtml(r.real_ip || "")}</td>
         <td style="white-space:nowrap;">${r.difficulty ?? "--"}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;white-space:nowrap;">${r.nonce != null ? r.nonce : "--"}</td>
         <td style="white-space:nowrap;">${r.solve_time != null ? r.solve_time + "s" : "--"}</td>
         <td style="font-size:0.6875rem;white-space:nowrap;" title="${escapeHtml(r.adjustment_reason || "")}">${escapeHtml(r.adjustment_reason || "")}</td>
       </tr>
