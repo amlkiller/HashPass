@@ -7,6 +7,7 @@ export const state = {
   // 挖矿状态
   mining: false,
   visitorId: "",
+  currentSeed: null,
   miningWorkers: [],       // Worker 数组（多 Worker 并行）
   workerHashrates: {},     // 各 Worker 算力 { workerId: rate }
   miningTimer: null,
@@ -33,4 +34,10 @@ export const state = {
   puzzleStartTime: null,
   lastSolveTime: null,
   averageSolveTime: null,
+
+  // 超时奖励跟踪
+  bestHash: null,
+  bestNonce: -1,
+  bestLeadingZeros: 0,
+  traceData: null,
 };

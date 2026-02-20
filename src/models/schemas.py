@@ -26,6 +26,14 @@ class Submission(BaseModel):
     traceData: str = Field(max_length=2048)      # Cloudflare trace 数据
     hash: str = Field(max_length=256)            # 计算出的哈希值
 
+class BestHashSubmission(BaseModel):
+    visitorId: str = Field(max_length=128)
+    nonce: int = Field(ge=0, le=2**53)
+    submittedSeed: str = Field(max_length=128)
+    traceData: str = Field(max_length=2048)
+    hash: str = Field(max_length=256)
+    leadingZeros: int = Field(ge=0, le=256)
+
 class VerifyResponse(BaseModel):
     invite_code: str
 

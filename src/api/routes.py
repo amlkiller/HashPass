@@ -26,7 +26,7 @@ from src.core.turnstile import (
 )
 from src.core.useragent import validate_user_agent
 from src.core.webhook import send_webhook_notification
-from src.models.schemas import PuzzleRequest, PuzzleResponse, Submission, VerifyResponse
+from src.models.schemas import PuzzleRequest, PuzzleResponse, Submission, VerifyResponse, BestHashSubmission
 
 logger = logging.getLogger(__name__)
 
@@ -323,6 +323,68 @@ async def verify_solution(
     asyncio.create_task(append_to_verify_log(verify_data))
 
     return VerifyResponse(invite_code=invite_code)
+
+
+@router.post("/submit")
+async def submit_best_hash(
+    sub: BestHashSubmission,
+    request: Request,
+    token: str = Depends(verify_session_token),
+):
+    """
+    超时奖励：提交当前最优哈希（在收集窗口期内调用）
+    """
+    real_ip = _get_real_ip(request)
+
+    # Gate 1: 收集窗口必须开放
+    if state.timeout_window_end is None or time.time() > state.timeout_window_end:
+        raise HTTPException(status_code=409, detail="No active timeout collection window")
+
+    # Gate 2: Seed 必须匹配超时时的 seed
+    if state.timed_out_seed is None or sub.submittedSeed != state.timed_out_seed:
+        raise HTTPException(status_code=409, detail="Seed does not match timed-out puzzle")
+
+    # Gate 3: TraceData IP 必须与请求 IP 一致
+    trace_ip = None
+    for line in sub.traceData.splitlines():
+        if line.startswith("ip="):
+            trace_ip = line[3:].strip()
+            break
+    if trace_ip != real_ip:
+        raise HTTPException(status_code=403, detail="Identity mismatch")
+
+    # Gate 4: visitorId 必须与 Session 绑定一致
+    token_data = state.session_tokens.get(token, {})
+    stored_vid = token_data.get("visitor_id")
+    if stored_vid is not None and stored_vid != sub.visitorId:
+        raise HTTPException(status_code=403, detail="Device fingerprint mismatch")
+
+    # Gate 5: 至少 1 个前导零
+    if sub.leadingZeros < 1:
+        raise HTTPException(status_code=400, detail="Leading zeros must be >= 1")
+
+    # Gate 6: 每个 IP 只允许提交一次
+    if any(s["ip"] == real_ip for s in state.timeout_submissions):
+        return {"status": "already_submitted"}
+
+    winner_ws = token_data.get("websocket") if token_data.get("is_connected") else None
+
+    state.timeout_submissions.append(
+        {
+            "visitor_id": sub.visitorId,
+            "nonce": sub.nonce,
+            "hash": sub.hash,
+            "leading_zeros": sub.leadingZeros,
+            "ip": real_ip,
+            "trace_data": sub.traceData,
+            "websocket": winner_ws,
+        }
+    )
+
+    logger.info(
+        "Timeout submission: IP=%s zeros=%d nonce=%d", real_ip, sub.leadingZeros, sub.nonce
+    )
+    return {"status": "submitted"}
 
 
 @router.get("/health")

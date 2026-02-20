@@ -190,6 +190,11 @@ export async function startMining() {
   document.getElementById("progress").classList.remove("hidden");
   document.getElementById("statusText").textContent = "挖矿中...";
 
+  // 重置超时奖励跟踪
+  state.bestHash = null;
+  state.bestNonce = -1;
+  state.bestLeadingZeros = 0;
+
   // 启动计时器
   startMiningTimer();
 
@@ -207,6 +212,7 @@ export async function startMining() {
     }
 
     // 提取并显示关键信息
+    state.traceData = traceData;
     const traceLines = traceData.split("\n");
     const ipLine = traceLines.find((line) => line.startsWith("ip="));
     const ip = ipLine ? ipLine.slice(3).trim() : "未知";
@@ -242,6 +248,7 @@ export async function startMining() {
     }
 
     const puzzle = await puzzleResponse.json();
+    state.currentSeed = puzzle.seed;
     const workerCount = puzzle.worker_count || 1;
 
     // 更新难度显示
@@ -302,6 +309,18 @@ export async function startMining() {
           case "ERROR":
             log(`Worker ${workerId} 错误: ${message}`, "error");
             stopMining();
+            break;
+
+          case "BEST_HASH_UPDATE":
+            if (
+              e.data.bestLeadingZeros > state.bestLeadingZeros ||
+              (e.data.bestLeadingZeros === state.bestLeadingZeros &&
+                (state.bestNonce === -1 || e.data.bestNonce < state.bestNonce))
+            ) {
+              state.bestLeadingZeros = e.data.bestLeadingZeros;
+              state.bestHash = e.data.bestHash;
+              state.bestNonce = e.data.bestNonce;
+            }
             break;
 
           case "STOPPED":
@@ -383,5 +402,52 @@ export async function copyCode() {
     input.select();
     document.execCommand("copy");
     log("邀请码已复制到剪贴板");
+  }
+}
+
+/**
+ * 超时奖励：提交当前最优哈希
+ * @param {string} timedOutSeed - 超时时的种子
+ */
+export async function submitBestHash() {
+  if (!state.bestHash || state.bestNonce < 0 || state.bestLeadingZeros < 1) {
+    log("超时: 无有效哈希可提交", "warning");
+    return;
+  }
+  if (!state.traceData) {
+    log("超时: 无 TraceData，跳过提交", "warning");
+    return;
+  }
+
+  log(`超时: 正在提交最优哈希 (${state.bestLeadingZeros} 前导零, nonce=${state.bestNonce})...`);
+
+  try {
+    const response = await fetch("/api/submit", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${state.sessionToken}`,
+      },
+      body: JSON.stringify({
+        visitorId: state.visitorId,
+        nonce: state.bestNonce,
+        submittedSeed: state.currentSeed,
+        traceData: state.traceData,
+        hash: state.bestHash,
+        leadingZeros: state.bestLeadingZeros,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      log(`超时提交成功 (${data.status})`, "info");
+    } else if (response.status === 409) {
+      log("超时提交: 窗口已关闭或种子不匹配", "warning");
+    } else {
+      const err = await response.json().catch(() => ({}));
+      log(`超时提交失败: ${err.detail || response.status}`, "error");
+    }
+  } catch (e) {
+    log(`超时提交网络错误: ${e.message}`, "error");
   }
 }

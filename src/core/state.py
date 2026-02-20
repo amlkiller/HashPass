@@ -102,6 +102,12 @@ class SystemState:
         # 超时检查任务
         self.timeout_task: Optional[asyncio.Task] = None
 
+        # 超时奖励状态
+        self.timed_out_seed: Optional[str] = None
+        self.timeout_window_end: Optional[float] = None
+        self.timeout_submissions: list = []
+        self.timeout_award_task: Optional[asyncio.Task] = None
+
         # Session Token 清理任务
         self.cleanup_task: Optional[asyncio.Task] = None
 
@@ -312,6 +318,8 @@ class SystemState:
                         mining_time = self.get_current_mining_time()
 
                         if mining_time >= self.target_timeout:
+                            timed_out_seed = self.current_seed  # 重置前快照
+
                             # 将 target_timeout 作为虚拟解题时间注入 EMA
                             old_difficulty, new_difficulty, reason = self.adjust_difficulty(
                                 self.target_timeout
@@ -326,14 +334,35 @@ class SystemState:
                                 new_difficulty,
                             )
 
+                            # 取消旧的奖励任务（防御性处理）
+                            if self.timeout_award_task and not self.timeout_award_task.done():
+                                self.timeout_award_task.cancel()
+
+                            COLLECTION_WINDOW = 10.0
+                            self.timed_out_seed = timed_out_seed
+                            self.timeout_window_end = time.time() + COLLECTION_WINDOW
+                            self.timeout_submissions = []
+
                             # 重置puzzle
                             self.reset_puzzle()
 
-                            # 锁内快照消息（reset_puzzle 后状态已确定）
-                            reset_msg = self.get_puzzle_reset_message()
+                            # 锁内快照消息（带超时标记）
+                            reset_msg = self.get_puzzle_reset_message(
+                                is_timeout=True
+                            )
+
+                            # 启动奖励任务
+                            self.timeout_award_task = asyncio.create_task(
+                                self._award_timeout_winner(timed_out_seed, COLLECTION_WINDOW)
+                            )
 
                             # 重新启动超时检查
-                            await self.start_timeout_checker()
+                            # 注意：不能调用 start_timeout_checker()，因为它会
+                            # 对 self.timeout_task（即当前任务）调用 cancel()，
+                            # 导致 CancelledError 在锁外的 broadcast_raw() 处触发，
+                            # 使广播被静默丢弃。直接创建新任务即可，当前任务
+                            # 会在广播完成后自然退出。
+                            self.timeout_task = asyncio.create_task(self._check_timeout())
 
                             # 退出当前检查循环（锁外广播在 break 后执行）
                             break
@@ -347,6 +376,127 @@ class SystemState:
             pass
         except Exception as e:
             logger.error("Timeout checker error: %s", e, exc_info=True)
+
+    async def _award_timeout_winner(self, timed_out_seed: str, collection_window: float) -> None:
+        """等待收集窗口结束后，选出最优提交并颁发邀请码"""
+        from datetime import datetime as _dt
+
+        from src.core.audit import append_to_verify_log
+        from src.core.crypto import generate_invite_code, verify_argon2_solution
+        from src.core.executor import get_process_pool
+
+        def _count_leading_zeros(hex_hash: str) -> int:
+            val = int(hex_hash, 16) if hex_hash else 0
+            return 256 - val.bit_length() if val else 256
+
+        try:
+            await asyncio.sleep(collection_window)
+
+            submissions = list(self.timeout_submissions)
+            if not submissions:
+                logger.info("Timeout reward: no submissions, no award")
+                return
+
+            logger.info("Timeout reward: evaluating %d submission(s)", len(submissions))
+
+            # 最多前导零优先，同等时 nonce 最小优先；最多验证前 10 名
+            candidates = sorted(submissions, key=lambda s: (-s["leading_zeros"], s["nonce"]))[:10]
+
+            loop = asyncio.get_running_loop()
+            executor = get_process_pool()
+
+            for candidate in candidates:
+                # 快速预检：客户端声称的前导零必须与哈希实际值相符
+                actual_zeros = _count_leading_zeros(candidate["hash"])
+                if actual_zeros < candidate["leading_zeros"]:
+                    logger.warning(
+                        "Timeout reward: fraudulent submission from IP=%s "
+                        "(declared=%d, actual=%d), skipping",
+                        candidate["ip"],
+                        candidate["leading_zeros"],
+                        actual_zeros,
+                    )
+                    continue
+
+                is_valid, _ = await loop.run_in_executor(
+                    executor,
+                    verify_argon2_solution,
+                    candidate["nonce"],
+                    timed_out_seed,
+                    candidate["visitor_id"],
+                    candidate["ip"],
+                    candidate["hash"],
+                    candidate["leading_zeros"],
+                    self.argon2_time_cost,
+                    self.argon2_memory_cost,
+                    self.argon2_parallelism,
+                )
+                if not is_valid:
+                    logger.debug(
+                        "Timeout reward: Argon2 verification failed for IP=%s", candidate["ip"]
+                    )
+                    continue
+
+                invite_code = generate_invite_code(
+                    hmac_secret=self.hmac_secret,
+                    visitor_id=candidate["visitor_id"],
+                    nonce=candidate["nonce"],
+                    seed=timed_out_seed,
+                )
+
+                logger.info(
+                    "Timeout reward winner: IP=%s nonce=%d leading_zeros=%d code=%s",
+                    candidate["ip"],
+                    candidate["nonce"],
+                    candidate["leading_zeros"],
+                    invite_code,
+                )
+
+                ws = candidate.get("websocket")
+                if ws is not None:
+                    try:
+                        await ws.send_text(
+                            json.dumps(
+                                {
+                                    "type": "TIMEOUT_INVITE_CODE",
+                                    "invite_code": invite_code,
+                                    "leading_zeros": candidate["leading_zeros"],
+                                }
+                            )
+                        )
+                    except Exception as e:
+                        logger.warning("Failed to deliver TIMEOUT_INVITE_CODE: %s", e)
+
+                asyncio.create_task(
+                    append_to_verify_log(
+                        {
+                            "timestamp": _dt.now().isoformat(),
+                            "invite_code": invite_code,
+                            "visitor_id": candidate["visitor_id"],
+                            "nonce": candidate["nonce"],
+                            "hash": candidate["hash"],
+                            "seed": timed_out_seed,
+                            "real_ip": candidate["ip"],
+                            "trace_data": candidate.get("trace_data", ""),
+                            "difficulty": candidate["leading_zeros"],
+                            "solve_time": None,
+                            "new_difficulty": self.difficulty,
+                            "adjustment_reason": "timeout_reward",
+                        }
+                    )
+                )
+                return  # 仅颁发一个获胜者
+
+            logger.warning("Timeout reward: no valid submission after Argon2 verification")
+
+        except asyncio.CancelledError:
+            logger.debug("Timeout award task cancelled (regular solve won first)")
+        except Exception as e:
+            logger.error("Timeout award task error: %s", e, exc_info=True)
+        finally:
+            self.timeout_submissions = []
+            self.timed_out_seed = None
+            self.timeout_window_end = None
 
     async def _broadcast(self, message: str) -> None:
         """并行广播消息给所有连接的客户端，清理断开的连接"""
@@ -362,20 +512,23 @@ class SystemState:
         if disconnected:
             logger.debug("Removed %d disconnected connections", len(disconnected))
 
-    def get_puzzle_reset_message(self) -> str:
+    def get_puzzle_reset_message(
+        self,
+        is_timeout: bool = False,
+    ) -> str:
         """构建 puzzle 重置消息的 JSON 字符串（在锁内调用以捕获快照）"""
-        return json.dumps(
-            {
-                "type": "PUZZLE_RESET",
-                "seed": self.current_seed,
-                "difficulty": self.difficulty,
-                "solve_time": round(self.last_solve_time, 2)
-                if self.last_solve_time is not None
-                else None,
-                "average_solve_time": self.average_solve_time,
-                "puzzle_start_time": self.puzzle_start_time,
-            }
-        )
+        msg: dict = {
+            "type": "PUZZLE_RESET",
+            "seed": self.current_seed,
+            "difficulty": self.difficulty,
+            "solve_time": round(self.last_solve_time, 2)
+            if self.last_solve_time is not None
+            else None,
+            "average_solve_time": self.average_solve_time,
+            "puzzle_start_time": self.puzzle_start_time,
+            "is_timeout": is_timeout,
+        }
+        return json.dumps(msg)
 
     async def broadcast_raw(self, message: str) -> None:
         """广播预构建的消息字符串给所有连接的客户端（在锁外调用）"""

@@ -160,7 +160,14 @@ function handleWebSocketMessage(data) {
     });
 
     // 如果正在挖矿，自动重启挖矿（继续竞争）
-    if (state.mining) {
+    if (data.is_timeout && state.mining) {
+      log("谜题超时！正在提交最优哈希...", "warning");
+      getMining().then(async ({ stopMining, startMining, submitBestHash }) => {
+        stopMining();
+        await submitBestHash();
+        setTimeout(() => startMining(), 100);
+      });
+    } else if (state.mining) {
       log("正在自动重启挖矿...");
       // 动态导入 mining.js 以避免循环依赖
       getMining().then(({ stopMining, startMining }) => {
@@ -171,6 +178,13 @@ function handleWebSocketMessage(data) {
         }, 100);
       });
     }
+  } else if (data.type === "TIMEOUT_INVITE_CODE") {
+    const code = data.invite_code;
+    log(`超时奖励邀请码: ${code}`, "success");
+    const resultEl = document.getElementById("result");
+    const codeEl = document.getElementById("inviteCode");
+    if (resultEl) resultEl.classList.remove("hidden");
+    if (codeEl) codeEl.value = code;
   } else if (data.type === "NETWORK_HASHRATE") {
     // 处理全网算力更新
     updateNetworkHashRate(data.total_hashrate, data.active_miners);

@@ -54,6 +54,11 @@ async function startMining({
   let lastUpdateTime = Date.now();
   let hashCount = 0; // 实际哈希次数
 
+  // 追踪本 Worker 的最优哈希
+  let bestHash = null;
+  let bestNonce = -1;
+  let bestLeadingZeros = 0;
+
   self.postMessage({
     type: "LOG",
     workerId,
@@ -73,6 +78,22 @@ async function startMining({
         hashLength: 32,
         outputType: "hex",
       });
+
+      // 更新本 Worker 的最优哈希
+      const currentZeros = countLeadingZeroBits(hash);
+      if (currentZeros > bestLeadingZeros ||
+          (currentZeros === bestLeadingZeros && (bestNonce === -1 || nonce < bestNonce))) {
+        bestLeadingZeros = currentZeros;
+        bestHash = hash;
+        bestNonce = nonce;
+        self.postMessage({
+          type: "BEST_HASH_UPDATE",
+          workerId,
+          bestHash,
+          bestNonce,
+          bestLeadingZeros,
+        });
+      }
 
       const currentTime = Date.now();
       const timeSinceLastUpdate = (currentTime - lastUpdateTime) / 1000;
