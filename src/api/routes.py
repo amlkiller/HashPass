@@ -363,6 +363,12 @@ async def submit_best_hash(
     if sub.leadingZeros < 1:
         raise HTTPException(status_code=400, detail="Leading zeros must be >= 1")
 
+    # Gate 5.5: 检查计算速度（nonce / target_timeout）是否超过阈值
+    speed_ok, speed_error = check_nonce_speed(sub.nonce, state.target_timeout)
+    if not speed_ok:
+        logger.warning("Speed check failed on submit for IP %s: %s", real_ip, speed_error)
+        raise HTTPException(status_code=400, detail=speed_error)
+
     # Gate 6: 每个 IP 只允许提交一次
     if any(s["ip"] == real_ip for s in state.timeout_submissions):
         return {"status": "already_submitted"}
