@@ -95,7 +95,7 @@
             <div class="admin-tabs">
                 <button class="admin-tab active" data-tab="dashboard" onclick="switchTab('dashboard')">仪表盘</button>
                 <button class="admin-tab" data-tab="params" onclick="switchTab('params')">参数</button>
-                <button class="admin-tab" data-tab="logs" onclick="switchTab('logs')">邀请码</button>
+                <button class="admin-tab" data-tab="logs" onclick="switchTab('logs')">兑换码</button>
                 <button class="admin-tab" data-tab="applogs" onclick="switchTab('applogs')">日志</button>
                 <button class="admin-tab" data-tab="operations" onclick="switchTab('operations')">操作</button>
             </div>
@@ -287,7 +287,7 @@
                 <div class="flex flex-col gap-4">
                     <!-- Search & File Selector -->
                     <div class="search-bar">
-                        <input type="text" class="search-input" id="log-search-input" placeholder="搜索（visitor_id、邀请码、IP...）" onkeydown="if(event.key==='Enter')_logsSearch()">
+                        <input type="text" class="search-input" id="log-search-input" placeholder="搜索（visitor_id、兑换码、IP...）" onkeydown="if(event.key==='Enter')_logsSearch()">
                         <select class="file-select" id="log-file-select" onchange="_logsFileChange()">
                             <option>verify.json</option>
                         </select>
@@ -303,7 +303,7 @@
                             <thead>
                                 <tr>
                                     <th>时间</th>
-                                    <th>邀请码</th>
+                                    <th>兑换码</th>
                                     <th>访客 ID</th>
                                     <th>IP</th>
                                     <th>难度</th>
@@ -405,7 +405,7 @@
                     <div class="op-card">
                         <h3>HMAC 密钥</h3>
                         <p>设置指定的 HMAC 密钥（十六进制），留空则随机生成 256 位密钥。</p>
-                        <div class="danger-banner">此操作将使所有已签发的邀请码失效，且无法撤销。</div>
+                        <div class="danger-banner">此操作将使所有已签发的兑换码失效，且无法撤销。</div>
                         <div class="flex gap-2 items-center" style="align-self:flex-start;">
                             <input type="text" class="param-input" id="op-hmac-input" placeholder="十六进制（留空 = 随机）" style="width:280px;">
                             <button class="admin-btn danger" onclick="opRegenerateHmac()">应用</button>

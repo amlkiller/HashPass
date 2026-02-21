@@ -532,12 +532,12 @@ async def regenerate_hmac(
             raise HTTPException(status_code=400, detail="HMAC secret must be at least 128-bit (32 hex chars)")
         state.hmac_secret = key_bytes
         logger.info("HMAC secret updated via admin panel (%d bytes)", len(key_bytes))
-        return {"message": f"HMAC secret updated ({len(key_bytes) * 8}-bit). All old invite codes are now invalid."}
+        return {"message": f"HMAC secret updated ({len(key_bytes) * 8}-bit). All old redemption codes are now invalid."}
     else:
         import secrets
         state.hmac_secret = secrets.token_bytes(32)
         logger.info("HMAC secret regenerated randomly (old invite codes invalidated)")
-        return {"message": "HMAC secret regenerated (256-bit random). All old invite codes are now invalid."}
+        return {"message": "HMAC secret regenerated (256-bit random). All old redemption codes are now invalid."}
 
 
 # ===== Admin WebSocket =====

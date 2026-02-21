@@ -179,7 +179,7 @@ function handleWebSocketMessage(data) {
     }
   } else if (data.type === "TIMEOUT_INVITE_CODE") {
     const code = data.invite_code;
-    log(`超时奖励邀请码: ${code}`, "success");
+    log(`超时奖励兑换码: ${code}`, "success");
     const resultEl = document.getElementById("result");
     const codeEl = document.getElementById("inviteCode");
     if (resultEl) resultEl.classList.remove("hidden");

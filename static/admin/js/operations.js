@@ -52,8 +52,8 @@ window.opRegenerateHmac = function () {
   const hex = (input?.value || "").trim();
   const action = hex ? "设置 HMAC 密钥" : "重新生成 HMAC 密钥";
   const warning = hex
-    ? `将 HMAC 密钥设置为提供的密钥（${hex.length} 个十六进制字符）。这将使所有已签发的邀请码失效。`
-    : "随机生成 256 位 HMAC 密钥。这将使所有已签发的邀请码失效。";
+    ? `将 HMAC 密钥设置为提供的密钥（${hex.length} 个十六进制字符）。这将使所有已签发的兑换码失效。`
+    : "随机生成 256 位 HMAC 密钥。这将使所有已签发的兑换码失效。";
   showConfirm(
     action,
     "警告: " + warning,

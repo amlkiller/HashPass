@@ -180,7 +180,7 @@ async function submitSolution(result, submittedSeed, traceData) {
 
   if (response.ok) {
     const data = await response.json();
-    log(`🎉 获胜！邀请码: ${data.invite_code}`, "success");
+    log(`🎉 获胜！兑换码: ${data.invite_code}`, "success");
     document.getElementById("result").classList.remove("hidden");
     document.getElementById("inviteCode").value = data.invite_code;
   } else if (response.status === 401) {
@@ -422,17 +422,17 @@ export function stopMining() {
 }
 
 /**
- * 复制邀请码
+ * 复制兑换码
  */
 export async function copyCode() {
   const input = document.getElementById("inviteCode");
   try {
     await navigator.clipboard.writeText(input.value);
-    log("邀请码已复制到剪贴板");
+    log("兑换码已复制到剪贴板");
   } catch {
     input.select();
     document.execCommand("copy");
-    log("邀请码已复制到剪贴板");
+    log("兑换码已复制到剪贴板");
   }
 }
 
