@@ -59,6 +59,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Permissions-Policy"] = (
             "camera=(), microphone=(), geolocation=(), payment=()"
         )
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        #response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
         return response
 
 
