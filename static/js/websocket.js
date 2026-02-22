@@ -151,7 +151,6 @@ function handleWebSocketMessage(data) {
     if (data.solve_time != null) {
       log(`上轮用时: ${data.solve_time}s`);
     }
-    state.bestLeadingZeros = 0;
     getMining().then(({ setRequiredDifficulty, startPuzzleDurationTimer, updateSolveTimeStats }) => {
       setRequiredDifficulty(data.difficulty);
       updateSolveTimeStats(data.solve_time ?? null, data.average_solve_time ?? null);
@@ -163,7 +162,8 @@ function handleWebSocketMessage(data) {
       log("谜题超时！正在提交最优哈希...", "warning");
       getMining().then(async ({ stopMining, startMining, submitBestHash }) => {
         stopMining();
-        await submitBestHash();
+        await submitBestHash(); // 提交时 bestLeadingZeros 仍有效
+        // startMining 内部会重置 bestHash/bestNonce/bestLeadingZeros
         setTimeout(() => startMining(), 100);
       });
     } else if (state.mining) {
@@ -176,6 +176,10 @@ function handleWebSocketMessage(data) {
           startMining();
         }, 100);
       });
+    } else {
+      state.bestHash = null;
+      state.bestNonce = -1;
+      state.bestLeadingZeros = 0;
     }
   } else if (data.type === "TIMEOUT_INVITE_CODE") {
     const code = data.invite_code;
