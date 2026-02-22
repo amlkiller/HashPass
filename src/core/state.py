@@ -494,9 +494,9 @@ class SystemState:
         except Exception as e:
             logger.error("Timeout award task error: %s", e, exc_info=True)
         finally:
+            self.timeout_window_end = None
             self.timeout_submissions = []
             self.timed_out_seed = None
-            self.timeout_window_end = None
 
     async def _broadcast(self, message: str) -> None:
         """并行广播消息给所有连接的客户端，清理断开的连接"""
