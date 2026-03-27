@@ -367,9 +367,9 @@ class SystemState:
                             # 退出当前检查循环（锁外广播在 break 后执行）
                             break
 
-                    # 锁外：广播重置通知（O(N) I/O 不阻塞锁）
-                    await self.broadcast_raw(reset_msg)
-                    return
+            # 锁外：广播重置通知（O(N) I/O 不阻塞锁）
+            if reset_msg is not None:
+                await self.broadcast_raw(reset_msg)
 
         except asyncio.CancelledError:
             # 任务被取消（正常情况：puzzle被解出）
