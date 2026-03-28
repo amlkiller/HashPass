@@ -36,6 +36,7 @@ export const state = {
   averageSolveTime: null,
 
   // 超时奖励跟踪
+  timedOutSeed: null,
   bestHash: null,
   bestNonce: -1,
   bestLeadingZeros: 0,

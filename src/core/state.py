@@ -107,6 +107,8 @@ class SystemState:
         self.timeout_window_end: Optional[float] = None
         self.timeout_submissions: list = []
         self.timeout_award_task: Optional[asyncio.Task] = None
+        self.timeout_round_seq: int = 0
+        self.active_timeout_round_id: Optional[int] = None
 
         # Session Token 清理任务
         self.cleanup_task: Optional[asyncio.Task] = None
@@ -283,6 +285,30 @@ class SystemState:
         if len(self.solve_time_chart_history) > self.chart_history_max:
             self.solve_time_chart_history.pop(0)
 
+    def _clear_timeout_window_state(self, round_id: Optional[int] = None) -> bool:
+        """清空超时奖励窗口状态；若指定 round_id，仅清理匹配轮次。"""
+        if round_id is not None and self.active_timeout_round_id != round_id:
+            return False
+
+        self.timed_out_seed = None
+        self.timeout_window_end = None
+        self.timeout_submissions = []
+        self.active_timeout_round_id = None
+        return True
+
+    async def close_timeout_window(self) -> None:
+        """关闭当前超时奖励窗口并取消对应任务。"""
+        task = self.timeout_award_task
+        self.timeout_award_task = None
+        self._clear_timeout_window_state()
+
+        if task and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
     @property
     def average_solve_time(self) -> Optional[float]:
         if not self.solve_history:
@@ -317,59 +343,59 @@ class SystemState:
                         # 二次确认超时（防止在等待锁期间puzzle已被解出）
                         mining_time = self.get_current_mining_time()
 
-                        if mining_time >= self.target_timeout:
-                            timed_out_seed = self.current_seed  # 重置前快照
+                        if mining_time < self.target_timeout:
+                            continue
 
-                            # 将 target_timeout 作为虚拟解题时间注入 EMA
-                            old_difficulty, new_difficulty, reason = self.adjust_difficulty(
-                                self.target_timeout
+                        timed_out_seed = self.current_seed  # 重置前快照
+
+                        # 将 target_timeout 作为虚拟解题时间注入 EMA
+                        old_difficulty, new_difficulty, reason = self.adjust_difficulty(
+                            self.target_timeout
+                        )
+
+                        logger.info(
+                            "Difficulty adjustment (timeout %.1fs >= %ds): %s: %d -> %d",
+                            mining_time,
+                            self.target_timeout,
+                            reason,
+                            old_difficulty,
+                            new_difficulty,
+                        )
+
+                        await self.close_timeout_window()
+
+                        collection_window = 10.0
+                        self.timeout_round_seq += 1
+                        timeout_round_id = self.timeout_round_seq
+                        self.active_timeout_round_id = timeout_round_id
+                        self.timed_out_seed = timed_out_seed
+                        self.timeout_window_end = time.time() + collection_window
+                        self.timeout_submissions = []
+
+                        # 重置puzzle
+                        self.reset_puzzle()
+
+                        # 锁内快照消息（带超时标记）
+                        reset_msg = self.get_puzzle_reset_message(is_timeout=True)
+
+                        # 启动奖励任务
+                        self.timeout_award_task = asyncio.create_task(
+                            self._award_timeout_winner(
+                                timed_out_seed, collection_window, timeout_round_id
                             )
+                        )
 
-                            logger.info(
-                                "Difficulty adjustment (timeout %.1fs >= %ds): %s: %d -> %d",
-                                mining_time,
-                                self.target_timeout,
-                                reason,
-                                old_difficulty,
-                                new_difficulty,
-                            )
+                        # 重新启动超时检查
+                        # 注意：不能调用 start_timeout_checker()，因为它会
+                        # 对 self.timeout_task（即当前任务）调用 cancel()，
+                        # 导致 CancelledError 在锁外的 broadcast_raw() 处触发，
+                        # 使广播被静默丢弃。直接创建新任务即可，当前任务
+                        # 会在广播完成后自然退出。
+                        self.timeout_task = asyncio.create_task(self._check_timeout())
 
-                            # 取消旧的奖励任务（防御性处理）
-                            if self.timeout_award_task and not self.timeout_award_task.done():
-                                self.timeout_award_task.cancel()
-
-                            COLLECTION_WINDOW = 10.0
-                            self.timed_out_seed = timed_out_seed
-                            self.timeout_window_end = time.time() + COLLECTION_WINDOW
-                            self.timeout_submissions = []
-
-                            # 重置puzzle
-                            self.reset_puzzle()
-
-                            # 锁内快照消息（带超时标记）
-                            reset_msg = self.get_puzzle_reset_message(
-                                is_timeout=True
-                            )
-
-                            # 启动奖励任务
-                            self.timeout_award_task = asyncio.create_task(
-                                self._award_timeout_winner(timed_out_seed, COLLECTION_WINDOW)
-                            )
-
-                            # 重新启动超时检查
-                            # 注意：不能调用 start_timeout_checker()，因为它会
-                            # 对 self.timeout_task（即当前任务）调用 cancel()，
-                            # 导致 CancelledError 在锁外的 broadcast_raw() 处触发，
-                            # 使广播被静默丢弃。直接创建新任务即可，当前任务
-                            # 会在广播完成后自然退出。
-                            self.timeout_task = asyncio.create_task(self._check_timeout())
-
-                            # 退出当前检查循环（锁外广播在 break 后执行）
-                            break
-
-            # 锁外：广播重置通知（O(N) I/O 不阻塞锁）
-            if reset_msg is not None:
-                await self.broadcast_raw(reset_msg)
+                    # 锁外：广播重置通知（O(N) I/O 不阻塞锁）
+                    await self.broadcast_raw(reset_msg)
+                    return
 
         except asyncio.CancelledError:
             # 任务被取消（正常情况：puzzle被解出）
@@ -377,13 +403,16 @@ class SystemState:
         except Exception as e:
             logger.error("Timeout checker error: %s", e, exc_info=True)
 
-    async def _award_timeout_winner(self, timed_out_seed: str, collection_window: float) -> None:
+    async def _award_timeout_winner(
+        self, timed_out_seed: str, collection_window: float, timeout_round_id: int
+    ) -> None:
         """等待收集窗口结束后，选出最优提交并颁发邀请码"""
         from datetime import datetime as _dt
 
         from src.core.audit import append_to_verify_log
         from src.core.crypto import generate_invite_code, verify_argon2_solution
         from src.core.executor import get_process_pool
+        from src.core.webhook import send_webhook_notification
 
         def _count_leading_zeros(hex_hash: str) -> int:
             val = int(hex_hash, 16) if hex_hash else 0
@@ -392,6 +421,16 @@ class SystemState:
         try:
             await asyncio.sleep(collection_window)
 
+            if (
+                self.active_timeout_round_id != timeout_round_id
+                or self.timed_out_seed != timed_out_seed
+            ):
+                logger.debug(
+                    "Timeout reward: round %s no longer active, skipping",
+                    timeout_round_id,
+                )
+                return
+
             submissions = list(self.timeout_submissions)
             if not submissions:
                 logger.info("Timeout reward: no submissions, no award")
@@ -399,15 +438,17 @@ class SystemState:
 
             logger.info("Timeout reward: evaluating %d submission(s)", len(submissions))
 
-            # 最多前导零优先，同等时 nonce 最小优先；最多验证前 10 名
-            candidates = sorted(submissions, key=lambda s: (-s["leading_zeros"], s["nonce"]))[:10]
+            ranked_candidates = []
+            for candidate in submissions:
+                try:
+                    actual_zeros = _count_leading_zeros(candidate["hash"])
+                except ValueError:
+                    logger.warning(
+                        "Timeout reward: invalid hex hash from IP=%s, skipping",
+                        candidate["ip"],
+                    )
+                    continue
 
-            loop = asyncio.get_running_loop()
-            executor = get_process_pool()
-
-            for candidate in candidates:
-                # 快速预检：客户端声称的前导零必须与哈希实际值相符
-                actual_zeros = _count_leading_zeros(candidate["hash"])
                 if actual_zeros < candidate["leading_zeros"]:
                     logger.warning(
                         "Timeout reward: fraudulent submission from IP=%s "
@@ -418,6 +459,27 @@ class SystemState:
                     )
                     continue
 
+                ranked_candidates.append(
+                    {
+                        **candidate,
+                        "actual_leading_zeros": actual_zeros,
+                    }
+                )
+
+            if not ranked_candidates:
+                logger.warning("Timeout reward: no valid candidate after pre-check")
+                return
+
+            # 服务端按实际前导零排序，同等时 nonce 最小优先；最多验证前 10 名
+            candidates = sorted(
+                ranked_candidates,
+                key=lambda s: (-s["actual_leading_zeros"], s["nonce"]),
+            )[:10]
+
+            loop = asyncio.get_running_loop()
+            executor = get_process_pool()
+
+            for candidate in candidates:
                 is_valid, _ = await loop.run_in_executor(
                     executor,
                     verify_argon2_solution,
@@ -426,7 +488,7 @@ class SystemState:
                     candidate["visitor_id"],
                     candidate["ip"],
                     candidate["hash"],
-                    candidate["leading_zeros"],
+                    candidate["actual_leading_zeros"],
                     self.argon2_time_cost,
                     self.argon2_memory_cost,
                     self.argon2_parallelism,
@@ -444,11 +506,17 @@ class SystemState:
                     seed=timed_out_seed,
                 )
 
+                asyncio.create_task(
+                    send_webhook_notification(
+                        visitor_id=candidate["visitor_id"], invite_code=invite_code
+                    )
+                )
+
                 logger.info(
                     "Timeout reward winner: IP=%s nonce=%d leading_zeros=%d code=%s",
                     candidate["ip"],
                     candidate["nonce"],
-                    candidate["leading_zeros"],
+                    candidate["actual_leading_zeros"],
                     invite_code,
                 )
 
@@ -460,7 +528,7 @@ class SystemState:
                                 {
                                     "type": "TIMEOUT_INVITE_CODE",
                                     "invite_code": invite_code,
-                                    "leading_zeros": candidate["leading_zeros"],
+                                    "leading_zeros": candidate["actual_leading_zeros"],
                                 }
                             )
                         )
@@ -478,7 +546,7 @@ class SystemState:
                             "seed": timed_out_seed,
                             "real_ip": candidate["ip"],
                             "trace_data": candidate.get("trace_data", ""),
-                            "difficulty": candidate["leading_zeros"],
+                            "difficulty": candidate["actual_leading_zeros"],
                             "solve_time": None,
                             "new_difficulty": self.difficulty,
                             "adjustment_reason": "timeout_reward",
@@ -494,9 +562,9 @@ class SystemState:
         except Exception as e:
             logger.error("Timeout award task error: %s", e, exc_info=True)
         finally:
-            self.timeout_window_end = None
-            self.timeout_submissions = []
-            self.timed_out_seed = None
+            if self.timeout_award_task is asyncio.current_task():
+                self.timeout_award_task = None
+            self._clear_timeout_window_state(timeout_round_id)
 
     async def _broadcast(self, message: str) -> None:
         """并行广播消息给所有连接的客户端，清理断开的连接"""

@@ -310,6 +310,7 @@ async def verify_solution(
         }
 
         # 6.4 重置puzzle并快照广播消息（在锁内）
+        await state.close_timeout_window()
         state.reset_puzzle()
         reset_msg = state.get_puzzle_reset_message()
 
@@ -336,14 +337,6 @@ async def submit_best_hash(
     """
     real_ip = _get_real_ip(request)
 
-    # Gate 1: 收集窗口必须开放
-    if state.timeout_window_end is None or time.time() > state.timeout_window_end:
-        raise HTTPException(status_code=409, detail="No active timeout collection window")
-
-    # Gate 2: Seed 必须匹配超时时的 seed
-    if state.timed_out_seed is None or sub.submittedSeed != state.timed_out_seed:
-        raise HTTPException(status_code=409, detail="Seed does not match timed-out puzzle")
-
     # Gate 3: TraceData IP 必须与请求 IP 一致
     trace_ip = None
     for line in sub.traceData.splitlines():
@@ -369,23 +362,32 @@ async def submit_best_hash(
         logger.warning("Speed check failed on submit for IP %s: %s", real_ip, speed_error)
         raise HTTPException(status_code=400, detail=speed_error)
 
-    # Gate 6: 每个 IP 只允许提交一次
-    if any(s["ip"] == real_ip for s in state.timeout_submissions):
-        return {"status": "already_submitted"}
+    async with state.lock:
+        # Gate 1: 收集窗口必须开放
+        if state.timeout_window_end is None or time.time() > state.timeout_window_end:
+            raise HTTPException(status_code=409, detail="No active timeout collection window")
 
-    winner_ws = token_data.get("websocket") if token_data.get("is_connected") else None
+        # Gate 2: Seed 必须匹配超时时的 seed
+        if state.timed_out_seed is None or sub.submittedSeed != state.timed_out_seed:
+            raise HTTPException(status_code=409, detail="Seed does not match timed-out puzzle")
 
-    state.timeout_submissions.append(
-        {
-            "visitor_id": sub.visitorId,
-            "nonce": sub.nonce,
-            "hash": sub.hash,
-            "leading_zeros": sub.leadingZeros,
-            "ip": real_ip,
-            "trace_data": sub.traceData,
-            "websocket": winner_ws,
-        }
-    )
+        # Gate 6: 每个 IP 只允许提交一次
+        if any(s["ip"] == real_ip for s in state.timeout_submissions):
+            return {"status": "already_submitted"}
+
+        winner_ws = token_data.get("websocket") if token_data.get("is_connected") else None
+
+        state.timeout_submissions.append(
+            {
+                "visitor_id": sub.visitorId,
+                "nonce": sub.nonce,
+                "hash": sub.hash,
+                "leading_zeros": sub.leadingZeros,
+                "ip": real_ip,
+                "trace_data": sub.traceData,
+                "websocket": winner_ws,
+            }
+        )
 
     logger.info(
         "Timeout submission: IP=%s zeros=%d nonce=%d", real_ip, sub.leadingZeros, sub.nonce

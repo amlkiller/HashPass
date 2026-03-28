@@ -249,9 +249,11 @@ async def update_difficulty(
 
     # 修改参数后立刻重置题目
     async with state.lock:
+        await state.close_timeout_window()
         state.reset_puzzle()
-        await state.broadcast_puzzle_reset()
+        reset_msg = state.get_puzzle_reset_message()
         await state.start_timeout_checker()
+    await state.broadcast_raw(reset_msg)
 
     logger.info(
         "Difficulty updated: %d (range: %d-%d) - puzzle reset",
@@ -286,9 +288,11 @@ async def update_target_time(
 
     # 修改参数后立刻重置题目
     async with state.lock:
+        await state.close_timeout_window()
         state.reset_puzzle()
-        await state.broadcast_puzzle_reset()
+        reset_msg = state.get_puzzle_reset_message()
         await state.start_timeout_checker()
+    await state.broadcast_raw(reset_msg)
 
     logger.info(
         "Target time updated: target=%ds timeout=%ds - puzzle reset",
@@ -333,9 +337,11 @@ async def update_argon2(
 
     # 修改参数后立刻重置题目
     async with state.lock:
+        await state.close_timeout_window()
         state.reset_puzzle()
-        await state.broadcast_puzzle_reset()
+        reset_msg = state.get_puzzle_reset_message()
         await state.start_timeout_checker()
+    await state.broadcast_raw(reset_msg)
 
     logger.info(
         "Argon2 params updated: time=%d, mem=%dKB, par=%d - puzzle reset",
@@ -362,9 +368,11 @@ async def update_worker_count(
 
     # 修改参数后立刻重置题目
     async with state.lock:
+        await state.close_timeout_window()
         state.reset_puzzle()
-        await state.broadcast_puzzle_reset()
+        reset_msg = state.get_puzzle_reset_message()
         await state.start_timeout_checker()
+    await state.broadcast_raw(reset_msg)
 
     logger.info("Worker count updated: %d - puzzle reset", state.worker_count)
     return {
@@ -400,9 +408,11 @@ async def reset_puzzle(_: str = Depends(require_admin)):
     """强制重置谜题"""
     async with state.lock:
         old_seed = state.current_seed[:8]
+        await state.close_timeout_window()
         state.reset_puzzle()
-        await state.broadcast_puzzle_reset()
+        reset_msg = state.get_puzzle_reset_message()
         await state.start_timeout_checker()
+    await state.broadcast_raw(reset_msg)
 
     logger.info("Puzzle force-reset (old seed: %s...)", old_seed)
     return {"message": "Puzzle reset", "new_seed": state.current_seed[:8] + "..."}

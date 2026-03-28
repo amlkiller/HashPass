@@ -159,14 +159,16 @@ function handleWebSocketMessage(data) {
 
     // 如果正在挖矿，自动重启挖矿（继续竞争）
     if (data.is_timeout && state.mining) {
+      state.timedOutSeed = state.currentSeed;
       log("谜题超时！正在提交最优哈希...", "warning");
       getMining().then(async ({ stopMining, startMining, submitBestHash }) => {
         stopMining();
-        await submitBestHash(); // 提交时 bestLeadingZeros 仍有效
+        await submitBestHash(state.timedOutSeed); // 提交时 bestLeadingZeros 仍有效
         // startMining 内部会重置 bestHash/bestNonce/bestLeadingZeros
         setTimeout(() => startMining(), 100);
       });
     } else if (state.mining) {
+      state.timedOutSeed = null;
       log("正在自动重启挖矿...");
       // 动态导入 mining.js 以避免循环依赖
       getMining().then(({ stopMining, startMining }) => {
@@ -177,6 +179,7 @@ function handleWebSocketMessage(data) {
         }, 100);
       });
     } else {
+      state.timedOutSeed = null;
       state.bestHash = null;
       state.bestNonce = -1;
       state.bestLeadingZeros = 0;

@@ -272,6 +272,7 @@ export async function startMining() {
 
     const puzzle = await puzzleResponse.json();
     state.currentSeed = puzzle.seed;
+    state.timedOutSeed = null;
     const workerCount = puzzle.worker_count || 1;
 
     // 更新难度显示，启动 10s 定时刷新最佳难度
@@ -438,9 +439,9 @@ export async function copyCode() {
 
 /**
  * 超时奖励：提交当前最优哈希
- * @param {string} timedOutSeed - 超时时的种子
+ * @param {string | null} timedOutSeed - 超时时的种子
  */
-export async function submitBestHash() {
+export async function submitBestHash(timedOutSeed = null) {
   if (!state.bestHash || state.bestNonce < 0 || state.bestLeadingZeros < 1) {
     log("超时: 无有效哈希可提交", "warning");
     return;
@@ -453,6 +454,7 @@ export async function submitBestHash() {
   log(`超时: 正在提交最优哈希 (${state.bestLeadingZeros} 前导零, nonce=${state.bestNonce})...`);
 
   try {
+    const submittedSeed = timedOutSeed || state.timedOutSeed || state.currentSeed;
     const response = await fetch("/api/submit", {
       method: "POST",
       headers: {
@@ -462,7 +464,7 @@ export async function submitBestHash() {
       body: JSON.stringify({
         visitorId: state.visitorId,
         nonce: state.bestNonce,
-        submittedSeed: state.currentSeed,
+        submittedSeed: submittedSeed,
         traceData: state.traceData,
         hash: state.bestHash,
         leadingZeros: state.bestLeadingZeros,

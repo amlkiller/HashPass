@@ -1,7 +1,18 @@
 import ipaddress
+import re
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
+
+
+HASH_HEX_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
+def _normalize_hash_hex(value: str) -> str:
+    normalized = value.strip().lower()
+    if not HASH_HEX_RE.fullmatch(normalized):
+        raise ValueError("hash must be a 64-character hex string")
+    return normalized
 
 
 class PuzzleRequest(BaseModel):
@@ -26,6 +37,11 @@ class Submission(BaseModel):
     traceData: str = Field(max_length=2048)      # Cloudflare trace 数据
     hash: str = Field(max_length=256)            # 计算出的哈希值
 
+    @field_validator("hash")
+    @classmethod
+    def validate_hash(cls, v: str) -> str:
+        return _normalize_hash_hex(v)
+
 class BestHashSubmission(BaseModel):
     visitorId: str = Field(max_length=128)
     nonce: int = Field(ge=0, le=2**53)
@@ -33,6 +49,11 @@ class BestHashSubmission(BaseModel):
     traceData: str = Field(max_length=2048)
     hash: str = Field(max_length=256)
     leadingZeros: int = Field(ge=0, le=256)
+
+    @field_validator("hash")
+    @classmethod
+    def validate_hash(cls, v: str) -> str:
+        return _normalize_hash_hex(v)
 
 class VerifyResponse(BaseModel):
     invite_code: str
