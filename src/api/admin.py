@@ -437,10 +437,27 @@ async def kick_all(_: str = Depends(require_admin)):
     state.active_connections.clear()
     state.active_miners.clear()
     state.client_hashrates.clear()
+    state.overspeed_hashrates.clear()
     state.ip_connections.clear()
 
-    logger.info("Kicked all miners (%d connections, %d sessions revoked)", count, revoked)
-    return {"message": f"Kicked {count} connections, revoked {revoked} sessions"}
+    # 3. 重置谜题与计时状态，避免在连接被批量清空后留下半旧状态。
+    async with state.lock:
+        await state.close_timeout_window()
+        state.reset_puzzle()
+        await state.start_timeout_checker()
+
+    logger.info(
+        "Kicked all miners (%d connections, %d sessions revoked) and reset puzzle",
+        count,
+        revoked,
+    )
+    return {
+        "message": (
+            f"Kicked {count} connections, revoked {revoked} sessions, "
+            "and reset puzzle"
+        ),
+        "new_seed": state.current_seed[:8] + "...",
+    }
 
 
 @admin_router.post("/kick")
