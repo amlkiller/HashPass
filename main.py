@@ -1,10 +1,13 @@
 from src.core.log_config import setup_logging
+from multiprocessing import current_process
 
-setup_logging()
+if current_process().name == "MainProcess":
+    setup_logging()
 
 from src.core.event_loop import init_event_loop
 
-init_event_loop()  # Must be called before any asyncio usage
+if current_process().name == "MainProcess":
+    init_event_loop()  # Must be called before any asyncio usage
 
 # 加载环境变量
 import logging
